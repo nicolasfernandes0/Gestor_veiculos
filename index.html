@@ -1,115 +1,109 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Gestão de Veículos e Ponto</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
-body {
-font-family: 'Inter', sans-serif;
-background-color: #f3f4f6;
-}
-.tab-button.active {
-background-color: #1e40af;
-}
-.message-box-overlay {
-position: fixed;
-top: 0;
-left: 0;
-width: 100%;
-height: 100%;
-background-color: rgba(0, 0, 0, 0.5);
-display: flex;
-align-items: center;
-justify-content: center;
-z-index: 1000;
-}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão de Veículos e Ponto</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .tab-button.active {
+            background-color: #1e40af;
+        }
+        .message-box-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .table-container {
+            display: block;
+            width: 100%;
+            overflow-x: auto;
+        }
+    </style>
 </head>
-<body class="min-h-screen p-4 sm:p-8 flex items-center justify-center">
+<body class="min-h-screen p-4 sm:p-8 flex flex-col sm:items-center sm:justify-center">
+
+    <div id="login-container" class="w-full max-w-md bg-white p-8 rounded-lg shadow-xl hidden">
+        <h2 class="text-3xl font-bold text-center text-blue-600 mb-6">Iniciar Sessão</h2>
+        <form id="login-form" class="space-y-4">
+            <div>
+                <label for="email" class="sr-only">E-mail</label>
+                <input type="email" id="email" name="email" placeholder="E-mail" class="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+            </div>
+            <div>
+                <label for="password" class="sr-only">Palavra-passe</label>
+                <input type="password" id="password" name="password" placeholder="Palavra-passe" class="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+            </div>
+            <button type="submit" class="w-full bg-blue-600 text-white p-3 rounded-md font-semibold hover:bg-blue-700 transition-colors">Entrar</button>
+        </form>
+        <div class="mt-4 text-center">
+            <p class="text-gray-600">Ainda não tem uma conta? <button id="show-signup-btn" class="text-blue-600 font-semibold hover:underline">Registar-se</button></p>
+        </div>
+    </div>
+
+    <div id="signup-container" class="w-full max-w-md bg-white p-8 rounded-lg shadow-xl hidden">
+        <h2 class="text-3xl font-bold text-center text-blue-600 mb-6">Registar Nova Conta</h2>
+        <form id="signup-form" class="space-y-4">
+             <div>
+                <label for="signup-email" class="sr-only">E-mail</label>
+                <input type="email" id="signup-email" name="signup-email" placeholder="E-mail" class="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+            </div>
+            <div>
+                <label for="signup-password" class="sr-only">Palavra-passe</label>
+                <input type="password" id="signup-password" name="signup-password" placeholder="Palavra-passe" class="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+            </div>
+            <button type="submit" class="w-full bg-green-600 text-white p-3 rounded-md font-semibold hover:bg-green-700 transition-colors">Registar</button>
+        </form>
+        <div class="mt-4 text-center">
+            <p class="text-gray-600">Já tem uma conta? <button id="show-login-btn" class="text-blue-600 font-semibold hover:underline">Iniciar Sessão</button></p>
+        </div>
+    </div>
 
 
-<!-- Tela de Login -->
-<div id="login-container" class="w-full max-w-md bg-gray-50 p-6 sm:p-8 rounded-2xl shadow-lg hidden">
-<h2 class="text-2xl sm:text-3xl font-bold text-center text-blue-600 mb-6">Iniciar Sessão</h2>
-<form id="login-form" class="space-y-4">
-<div>
-<label for="email" class="sr-only">E-mail</label>
-<input type="email" id="email" name="email" placeholder="E-mail" class="w-full p-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" required>
-</div>
-<div>
-<label for="password" class="sr-only">Palavra-passe</label>
-<input type="password" id="password" name="password" placeholder="Palavra-passe" class="w-full p-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" required>
-</div>
-<button type="submit" class="w-full bg-blue-600 text-white p-3 rounded-xl font-semibold shadow-md hover:bg-blue-700 transition">Entrar</button>
-</form>
-<div class="mt-4 text-center">
-<p class="text-gray-600">Ainda não tem uma conta? <button id="show-signup-btn" class="text-blue-600 font-semibold hover:underline">Registar-se</button></p>
-</div>
-</div>
+    <div id="app-container" class="container mx-auto p-4 sm:p-8 hidden">
+        <nav class="bg-blue-600 text-white p-4 rounded-t-lg shadow-md flex flex-wrap justify-center sm:justify-between items-center space-y-2 sm:space-y-0">
+            <h1 class="text-xl font-bold text-center sm:text-left">Gestão de Veículos e Ponto</h1>
+            <div class="flex flex-wrap justify-center space-x-2 sm:space-x-4">
+                <button id="veiculos-tab" class="tab-button py-2 px-4 rounded-md transition-colors hover:bg-blue-700 active">Veículos</button>
+                <button id="ponto-tab" class="tab-button py-2 px-4 rounded-md transition-colors hover:bg-blue-700">Ponto</button>
+                <button id="utilizadores-tab" class="tab-button py-2 px-4 rounded-md transition-colors hover:bg-blue-700 hidden">Utilizadores</button>
+                <button id="logout-btn" class="bg-red-500 py-2 px-4 rounded-md hover:bg-red-600 transition-colors">Sair</button>
+            </div>
+        </nav>
 
+        <main id="app-content" class="bg-gray-200 p-4 sm:p-8 rounded-b-lg shadow-lg">
+            <div id="loading-spinner" class="text-center text-gray-500 hidden">
+                <p>A carregar...</p>
+            </div>
+        </main>
+    </div>
 
-<!-- Tela de Registo -->
-<div id="signup-container" class="w-full max-w-md bg-gray-50 p-6 sm:p-8 rounded-2xl shadow-lg hidden">
-<h2 class="text-2xl sm:text-3xl font-bold text-center text-blue-600 mb-6">Registar Nova Conta</h2>
-<form id="signup-form" class="space-y-4">
-<div>
-<label for="signup-email" class="sr-only">E-mail</label>
-<input type="email" id="signup-email" name="signup-email" placeholder="E-mail" class="w-full p-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" required>
-</div>
-<div>
-<label for="signup-password" class="sr-only">Palavra-passe</label>
-<input type="password" id="signup-password" name="signup-password" placeholder="Palavra-passe" class="w-full p-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" required>
-</div>
-<button type="submit" class="w-full bg-green-600 text-white p-3 rounded-xl font-semibold shadow-md hover:bg-green-700 transition">Registar</button>
-</form>
-<div class="mt-4 text-center">
-<p class="text-gray-600">Já tem uma conta? <button id="show-login-btn" class="text-blue-600 font-semibold hover:underline">Iniciar Sessão</button></p>
-</div>
-</div>
-
-
-<!-- Conteúdo Principal da Aplicação -->
-<div id="app-container" class="container mx-auto hidden">
-<!-- Navbar -->
-<nav class="bg-blue-600 text-white p-4 rounded-t-lg shadow-md flex flex-wrap justify-between items-center">
-<h1 class="text-lg sm:text-xl font-bold">Gestão de Veículos e Ponto</h1>
-<div class="flex flex-wrap gap-2 mt-2 sm:mt-0">
-<button id="veiculos-tab" class="tab-button py-2 px-3 text-sm sm:px-4 rounded-md transition-colors hover:bg-blue-700 active">Veículos</button>
-<button id="ponto-tab" class="tab-button py-2 px-3 text-sm sm:px-4 rounded-md transition-colors hover:bg-blue-700">Ponto</button>
-<button id="utilizadores-tab" class="tab-button py-2 px-3 text-sm sm:px-4 rounded-md transition-colors hover:bg-blue-700 hidden">Utilizadores</button>
-<button id="logout-btn" class="bg-red-500 py-2 px-3 text-sm sm:px-4 rounded-md hover:bg-red-600 transition-colors">Sair</button>
-</div>
-</nav>
-
-
-<!-- Content Area -->
-<main id="app-content" class="bg-gray-200 p-4 sm:p-8 rounded-b-lg shadow-lg">
-<div id="loading-spinner" class="text-center text-gray-500 hidden">
-<p>A carregar...</p>
-</div>
-</main>
-</div>
-
-    <!-- Modal para Detalhes de Uso -->
     <div id="use-details-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
         <div class="bg-white rounded-lg p-6 max-w-md w-full shadow-xl">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-xl font-semibold">Detalhes do Uso</h3>
                 <button id="close-modal-btn" class="text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
             </div>
-            <div id="modal-content" class="space-y-2">
-                <!-- Conteúdo do modal será preenchido dinamicamente -->
-            </div>
+            <div id="modal-content" class="space-y-2 text-sm text-gray-700">
+                </div>
             <div class="mt-6 flex justify-end">
                 <button id="close-modal-btn-bottom" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition-colors">Fechar</button>
             </div>
         </div>
     </div>
     
-    <!-- Custom Message Box -->
     <div id="message-box" class="message-box-overlay hidden">
         <div class="bg-white rounded-lg p-8 max-w-lg mx-4 shadow-xl text-center">
             <h3 id="message-box-title" class="text-2xl font-bold mb-4 text-red-600"></h3>
@@ -118,7 +112,6 @@ z-index: 1000;
         </div>
     </div>
     
-    <!-- Modal para Confirmação de Exclusão -->
     <div id="confirm-modal" class="message-box-overlay hidden">
         <div class="bg-white rounded-lg p-8 max-w-lg mx-4 shadow-xl text-center">
             <h3 id="confirm-modal-title" class="text-2xl font-bold mb-4 text-red-600"></h3>
@@ -130,14 +123,13 @@ z-index: 1000;
         </div>
     </div>
 
-    <!-- Modal para Devolução de Veículo -->
     <div id="return-vehicle-modal" class="message-box-overlay hidden">
         <div class="bg-white rounded-lg p-8 max-w-lg mx-4 shadow-xl text-center">
             <h3 class="text-2xl font-bold mb-4">Devolver Veículo</h3>
             <p class="text-gray-700 mb-6">Por favor, insira a quilometragem final do veículo.</p>
             <form id="return-vehicle-form" class="space-y-4">
                 <input type="number" id="final-mileage" placeholder="Quilometragem Final (km)" class="w-full p-3 border rounded-md" required>
-                <div class="flex justify-end space-x-4 mt-6">
+                <div class="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-4 mt-6">
                     <button type="button" id="cancel-return-btn" class="bg-gray-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-600 transition-colors">Cancelar</button>
                     <button type="submit" class="bg-green-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-600 transition-colors">Confirmar Devolução</button>
                 </div>
@@ -145,7 +137,6 @@ z-index: 1000;
         </div>
     </div>
 
-    <!-- Modal para Adicionar Manutenção -->
     <div id="add-maintenance-modal" class="message-box-overlay hidden">
         <div class="bg-white rounded-lg p-8 max-w-lg mx-4 shadow-xl">
             <h3 class="text-2xl font-bold mb-4">Adicionar Nova Manutenção</h3>
@@ -169,7 +160,7 @@ z-index: 1000;
                         <option value="Pendente">Pendente</option>
                     </select>
                 </div>
-                <div class="flex justify-end space-x-4 mt-6">
+                <div class="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-4 mt-6">
                     <button type="button" id="cancel-maintenance-btn" class="bg-gray-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-600 transition-colors">Cancelar</button>
                     <button type="submit" class="bg-green-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-600 transition-colors">Adicionar Manutenção</button>
                 </div>
@@ -766,9 +757,9 @@ z-index: 1000;
 
                 appContent.innerHTML = `
                     <div class="bg-white p-6 rounded-lg shadow space-y-6">
-                        <div class="flex justify-between items-center">
+                        <div class="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
                             <h2 class="text-xl font-semibold">Detalhes do Veículo: ${selectedVehicle.placa}</h2>
-                            <div class="flex space-x-2">
+                            <div class="flex flex-wrap justify-center space-x-2">
                                 ${currentUserRole === 'master' ? `
                                     ${isEditing ? 
                                         `<button onclick="window.handleSaveVehicleFromDOM()" class="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition-colors">Salvar</button>
@@ -802,12 +793,11 @@ z-index: 1000;
                             </div>
                         </div>
 
-                        <!-- Registrar Uso do Veículo -->
                         <div class="bg-gray-100 p-4 rounded-lg ${selectedVehicle.status === 'EM USO' ? 'hidden' : ''}">
                             <h3 class="text-lg font-medium mb-2">Registrar Uso do Veículo</h3>
                             <p class="text-sm text-gray-600">Usuário que fará o uso</p>
                             <form id="new-use-form" class="mt-2 space-y-4">
-                                <div class="flex space-x-4">
+                                <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
                                     <select name="utilizador" class="w-full p-2 border rounded-md">
                                         <option value="">Selecione um utilizador</option>
                                         ${users.map(user => `<option key="${user.id}" value="${user.nome}">${user.nome}</option>`).join('')}
@@ -818,17 +808,16 @@ z-index: 1000;
                                     <input type="number" name="quilometragemInicial" placeholder="Quilometragem Inicial (km)" class="w-full p-2 border rounded-md" />
                                 </div>
                                 <textarea name="finalidade" placeholder="Finalidade" rows="3" class="w-full p-2 border rounded-md"></textarea>
-                                <button type="button" onclick="window.handleRegisterVehicleUse()" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition-colors">Registrar Uso</button>
+                                <button type="button" onclick="window.handleRegisterVehicleUse()" class="w-full sm:w-auto bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition-colors">Registrar Uso</button>
                             </form>
                         </div>
                         
-                        <!-- Manutenções do Veículo -->
                         <div>
-                            <div class="flex justify-between items-center mb-2">
+                            <div class="flex flex-col sm:flex-row justify-between items-center mb-2 space-y-2 sm:space-y-0">
                                 <h3 class="text-lg font-medium">Manutenções do Veículo</h3>
-                                ${currentUserRole === 'master' ? `<button onclick="window.handleAddMaintenance('${selectedVehicleId}')" class="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition-colors">Nova Manutenção</button>` : ''}
+                                ${currentUserRole === 'master' ? `<button onclick="window.handleAddMaintenance('${selectedVehicleId}')" class="w-full sm:w-auto bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition-colors">Nova Manutenção</button>` : ''}
                             </div>
-                            <div class="bg-white p-4 rounded-lg shadow-inner">
+                            <div class="bg-white p-4 rounded-lg shadow-inner overflow-x-auto">
                                 <table class="min-w-full divide-y divide-gray-200">
                                     <thead>
                                         <tr>
@@ -856,7 +845,6 @@ z-index: 1000;
                             </div>
                         </div>
 
-                        <!-- Histórico de Usos -->
                         <div>
                             <h3 class="text-lg font-medium mb-2">Histórico de Usos</h3>
                             <div class="bg-white p-4 rounded-lg shadow-inner overflow-x-auto">
@@ -896,7 +884,7 @@ z-index: 1000;
                 switch (activeTab) {
                     case 'veiculos':
                         appContent.innerHTML = `
-                            <div class="flex justify-between items-center mb-4">
+                            <div class="flex flex-col sm:flex-row justify-between items-center mb-4 space-y-4 sm:space-y-0">
                                 <h2 class="text-xl font-semibold">Todos os Veículos Cadastrados</h2>
                                 <div class="flex space-x-2">
                                     ${currentUserRole === 'master' ? `<button onclick="window.toggleAddVehicleForm()" class="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition-colors">${showAddVehicleForm ? 'Cancelar' : 'Novo Veículo'}</button>` : ''}
@@ -912,12 +900,12 @@ z-index: 1000;
                                         <input type="text" name="vehicle-tipo" placeholder="Tipo" class="p-2 border rounded-md" required />
                                         <input type="text" name="vehicle-foto" placeholder="URL da Foto (opcional)" class="p-2 border rounded-md md:col-span-2" />
                                         <div class="md:col-span-2 text-right">
-                                            <button type="submit" class="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition-colors">Adicionar</button>
+                                            <button type="submit" class="w-full sm:w-auto bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition-colors">Adicionar</button>
                                         </div>
                                     </form>
                                 </div>
                             ` : ''}
-                            <div class="bg-white p-6 rounded-lg shadow">
+                            <div class="bg-white p-6 rounded-lg shadow table-container">
                                 <table class="min-w-full divide-y divide-gray-200">
                                     <thead>
                                         <tr>
@@ -958,14 +946,14 @@ z-index: 1000;
                         break;
                     case 'ponto':
                         appContent.innerHTML = `
-                            <div class="flex justify-between items-center mb-4">
+                            <div class="flex flex-col sm:flex-row justify-between items-center mb-4 space-y-4 sm:space-y-0">
                                 <h2 class="text-xl font-semibold">Registro de Ponto Global</h2>
                                 <div class="flex space-x-2">
                                     <button onclick="window.handleRegisterPoint('ENTRADA')" class="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition-colors">Registrar Entrada</button>
                                     <button onclick="window.handleRegisterPoint('SAÍDA')" class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition-colors">Registrar Saída</button>
                                 </div>
                             </div>
-                            <div class="bg-white p-6 rounded-lg shadow">
+                            <div class="bg-white p-6 rounded-lg shadow table-container">
                                 <table class="min-w-full divide-y divide-gray-200">
                                     <thead>
                                         <tr>
@@ -989,13 +977,13 @@ z-index: 1000;
                         break;
                     case 'utilizadores':
                         appContent.innerHTML = `
-                            <div class="flex justify-between items-center mb-4">
+                            <div class="flex flex-col sm:flex-row justify-between items-center mb-4 space-y-4 sm:space-y-0">
                                 <h2 class="text-xl font-semibold">Gestão de Utilizadores</h2>
                                 <div class="flex space-x-2">
                                     <button onclick="window.showMessage('Informação','Novos utilizadores devem ser registados através da página de Registo inicial da aplicação.')" class="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition-colors">Novo Utilizador</button>
                                 </div>
                             </div>
-                            <div class="bg-white p-6 rounded-lg shadow">
+                            <div class="bg-white p-6 rounded-lg shadow table-container">
                                 <table class="min-w-full divide-y divide-gray-200">
                                     <thead>
                                         <tr>
