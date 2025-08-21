@@ -1,95 +1,97 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestão de Veículos e Ponto</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6;
-        }
-        .tab-button.active {
-            background-color: #1e40af;
-        }
-        .message-box-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestão de Veículos e Ponto</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+body {
+font-family: 'Inter', sans-serif;
+background-color: #f3f4f6;
+}
+.tab-button.active {
+background-color: #1e40af;
+}
+.message-box-overlay {
+position: fixed;
+top: 0;
+left: 0;
+width: 100%;
+height: 100%;
+background-color: rgba(0, 0, 0, 0.5);
+display: flex;
+align-items: center;
+justify-content: center;
+z-index: 1000;
+}
+</style>
 </head>
-<body class="min-h-screen p-8 flex items-center justify-center">
-
-    <!-- Tela de Login -->
-    <div id="login-container" class="w-full max-w-md bg-white p-8 rounded-lg shadow-xl hidden">
-        <h2 class="text-3xl font-bold text-center text-blue-600 mb-6">Iniciar Sessão</h2>
-        <form id="login-form" class="space-y-4">
-            <div>
-                <label for="email" class="sr-only">E-mail</label>
-                <input type="email" id="email" name="email" placeholder="E-mail" class="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
-            </div>
-            <div>
-                <label for="password" class="sr-only">Palavra-passe</label>
-                <input type="password" id="password" name="password" placeholder="Palavra-passe" class="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
-            </div>
-            <button type="submit" class="w-full bg-blue-600 text-white p-3 rounded-md font-semibold hover:bg-blue-700 transition-colors">Entrar</button>
-        </form>
-        <div class="mt-4 text-center">
-            <p class="text-gray-600">Ainda não tem uma conta? <button id="show-signup-btn" class="text-blue-600 font-semibold hover:underline">Registar-se</button></p>
-        </div>
-    </div>
-
-    <!-- Tela de Registo -->
-    <div id="signup-container" class="w-full max-w-md bg-white p-8 rounded-lg shadow-xl hidden">
-        <h2 class="text-3xl font-bold text-center text-blue-600 mb-6">Registar Nova Conta</h2>
-        <form id="signup-form" class="space-y-4">
-             <div>
-                <label for="signup-email" class="sr-only">E-mail</label>
-                <input type="email" id="signup-email" name="signup-email" placeholder="E-mail" class="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
-            </div>
-            <div>
-                <label for="signup-password" class="sr-only">Palavra-passe</label>
-                <input type="password" id="signup-password" name="signup-password" placeholder="Palavra-passe" class="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
-            </div>
-            <button type="submit" class="w-full bg-green-600 text-white p-3 rounded-md font-semibold hover:bg-green-700 transition-colors">Registar</button>
-        </form>
-        <div class="mt-4 text-center">
-            <p class="text-gray-600">Já tem uma conta? <button id="show-login-btn" class="text-blue-600 font-semibold hover:underline">Iniciar Sessão</button></p>
-        </div>
-    </div>
+<body class="min-h-screen p-4 sm:p-8 flex items-center justify-center">
 
 
-    <!-- Conteúdo Principal da Aplicação -->
-    <div id="app-container" class="container mx-auto hidden">
-        <!-- Navbar -->
-        <nav class="bg-blue-600 text-white p-4 rounded-t-lg shadow-md flex justify-between items-center">
-            <h1 class="text-xl font-bold">Gestão de Veículos e Ponto</h1>
-            <div class="flex space-x-4">
-                <button id="veiculos-tab" class="tab-button py-2 px-4 rounded-md transition-colors hover:bg-blue-700 active">Veículos</button>
-                <button id="ponto-tab" class="tab-button py-2 px-4 rounded-md transition-colors hover:bg-blue-700">Ponto</button>
-                <button id="utilizadores-tab" class="tab-button py-2 px-4 rounded-md transition-colors hover:bg-blue-700 hidden">Utilizadores</button>
-                <button id="logout-btn" class="bg-red-500 py-2 px-4 rounded-md hover:bg-red-600 transition-colors">Sair</button>
-            </div>
-        </nav>
+<!-- Tela de Login -->
+<div id="login-container" class="w-full max-w-md bg-gray-50 p-6 sm:p-8 rounded-2xl shadow-lg hidden">
+<h2 class="text-2xl sm:text-3xl font-bold text-center text-blue-600 mb-6">Iniciar Sessão</h2>
+<form id="login-form" class="space-y-4">
+<div>
+<label for="email" class="sr-only">E-mail</label>
+<input type="email" id="email" name="email" placeholder="E-mail" class="w-full p-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+</div>
+<div>
+<label for="password" class="sr-only">Palavra-passe</label>
+<input type="password" id="password" name="password" placeholder="Palavra-passe" class="w-full p-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+</div>
+<button type="submit" class="w-full bg-blue-600 text-white p-3 rounded-xl font-semibold shadow-md hover:bg-blue-700 transition">Entrar</button>
+</form>
+<div class="mt-4 text-center">
+<p class="text-gray-600">Ainda não tem uma conta? <button id="show-signup-btn" class="text-blue-600 font-semibold hover:underline">Registar-se</button></p>
+</div>
+</div>
 
-        <!-- Content Area -->
-        <main id="app-content" class="bg-gray-200 p-8 rounded-b-lg shadow-lg">
-            <!-- Dynamic content will be rendered here -->
-            <div id="loading-spinner" class="text-center text-gray-500 hidden">
-                <p>A carregar...</p>
-            </div>
-        </main>
-    </div>
+
+<!-- Tela de Registo -->
+<div id="signup-container" class="w-full max-w-md bg-gray-50 p-6 sm:p-8 rounded-2xl shadow-lg hidden">
+<h2 class="text-2xl sm:text-3xl font-bold text-center text-blue-600 mb-6">Registar Nova Conta</h2>
+<form id="signup-form" class="space-y-4">
+<div>
+<label for="signup-email" class="sr-only">E-mail</label>
+<input type="email" id="signup-email" name="signup-email" placeholder="E-mail" class="w-full p-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+</div>
+<div>
+<label for="signup-password" class="sr-only">Palavra-passe</label>
+<input type="password" id="signup-password" name="signup-password" placeholder="Palavra-passe" class="w-full p-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" required>
+</div>
+<button type="submit" class="w-full bg-green-600 text-white p-3 rounded-xl font-semibold shadow-md hover:bg-green-700 transition">Registar</button>
+</form>
+<div class="mt-4 text-center">
+<p class="text-gray-600">Já tem uma conta? <button id="show-login-btn" class="text-blue-600 font-semibold hover:underline">Iniciar Sessão</button></p>
+</div>
+</div>
+
+
+<!-- Conteúdo Principal da Aplicação -->
+<div id="app-container" class="container mx-auto hidden">
+<!-- Navbar -->
+<nav class="bg-blue-600 text-white p-4 rounded-t-lg shadow-md flex flex-wrap justify-between items-center">
+<h1 class="text-lg sm:text-xl font-bold">Gestão de Veículos e Ponto</h1>
+<div class="flex flex-wrap gap-2 mt-2 sm:mt-0">
+<button id="veiculos-tab" class="tab-button py-2 px-3 text-sm sm:px-4 rounded-md transition-colors hover:bg-blue-700 active">Veículos</button>
+<button id="ponto-tab" class="tab-button py-2 px-3 text-sm sm:px-4 rounded-md transition-colors hover:bg-blue-700">Ponto</button>
+<button id="utilizadores-tab" class="tab-button py-2 px-3 text-sm sm:px-4 rounded-md transition-colors hover:bg-blue-700 hidden">Utilizadores</button>
+<button id="logout-btn" class="bg-red-500 py-2 px-3 text-sm sm:px-4 rounded-md hover:bg-red-600 transition-colors">Sair</button>
+</div>
+</nav>
+
+
+<!-- Content Area -->
+<main id="app-content" class="bg-gray-200 p-4 sm:p-8 rounded-b-lg shadow-lg">
+<div id="loading-spinner" class="text-center text-gray-500 hidden">
+<p>A carregar...</p>
+</div>
+</main>
+</div>
 
     <!-- Modal para Detalhes de Uso -->
     <div id="use-details-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
