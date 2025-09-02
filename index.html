@@ -1,96 +1,60 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <!--
-      ✅ Documento HTML comentado (detalhado)
-      - Idioma: pt-BR
-      - Estrutura voltada para um app web com login/registro, navegação por abas e vários modais
-      - Estilos: Tailwind via CDN + CSS adicional (fontes, overlays, utilitários)
-      - Observação: Este arquivo contém apenas HTML/CSS. Os IDs e classes estão prontos para conexão com JS.
-    -->
     <meta charset="UTF-8">
-    <!-- Viewport responsivo para mobile-first -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>Gestão de Veículos e Ponto</title>
-
-    <!-- Tailwind via CDN (ideal para prototipagem; em produção prefira build dedicado) -->
     <script src="https://cdn.tailwindcss.com"></script>
 
     <style>
-        /* Importa a família de fontes Inter com pesos 400, 600 e 700 */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
-
-        /* Define fonte padrão e um fundo neutro para toda a página */
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6; /* cinza-claro (equivalente ao bg-gray-100/200) */
+            background-color: #f3f4f6;
         }
-
-        /* Estado ativo dos botões de abas; reforça o uso de Tailwind */
         .tab-button.active {
-            background-color: #1e40af; /* azul-900 */
+            background-color: #1e40af;
         }
-
-        /* Overlay base reutilizável para caixas/modais de mensagem/confirm */
         .message-box-overlay {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.5); /* escurece o fundo */
+            background-color: rgba(0, 0, 0, 0.5);
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 1000; /* garante sobreposição acima do app */
+            z-index: 1000;
         }
-
-        /* Contêiner de tabela rolável horizontalmente (para telas pequenas) */
         .table-container {
             display: block;
             width: 100%;
-            overflow-x: auto; /* evita quebra do layout com muitas colunas */
+            overflow-x: auto;
         }
     </style>
 </head>
 
 <body class="min-h-screen p-4 sm:p-8 flex flex-col sm:items-center sm:justify-center">
-
-    <!--
-      =========================
-      ÁREA DE LOGIN (OCULTA)
-      =========================
-      - Exibida quando o usuário ainda não autenticou
-      - controlada via JS trocando a classe `hidden`
-    -->
+    <!-- Área de Login -->
     <div id="login-container" class="w-full max-w-md bg-white p-8 rounded-lg shadow-xl hidden">
         <h2 class="text-3xl font-bold text-center text-blue-600 mb-6">Iniciar Sessão</h2>
-
-        <!-- Formulário de login -->
         <form id="login-form" class="space-y-4">
-            <!-- Campo de e-mail; label com .sr-only para acessibilidade -->
             <div>
                 <label for="email" class="sr-only">E-mail</label>
                 <input type="email" id="email" name="email" placeholder="E-mail"
                        class="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
             </div>
-
-            <!-- Campo de senha (palavra-passe) -->
             <div>
                 <label for="password" class="sr-only">Palavra-passe</label>
                 <input type="password" id="password" name="password" placeholder="Palavra-passe"
                        class="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
             </div>
-
-            <!-- Botão principal de login -->
             <button type="submit"
                     class="w-full bg-blue-600 text-white p-3 rounded-md font-semibold hover:bg-blue-700 transition-colors">
                 Entrar
             </button>
         </form>
-
-        <!-- CTA para alternar para registro -->
         <div class="mt-4 text-center">
             <p class="text-gray-600">
                 Ainda não tem uma conta?
@@ -99,16 +63,9 @@
         </div>
     </div>
 
-    <!--
-      ============================
-      ÁREA DE REGISTRO (OCULTA)
-      ============================
-      - Alterna com a área de login via JS
-    -->
+    <!-- Área de Registro -->
     <div id="signup-container" class="w-full max-w-md bg-white p-8 rounded-lg shadow-xl hidden">
         <h2 class="text-3xl font-bold text-center text-blue-600 mb-6">Registar Nova Conta</h2>
-
-        <!-- Formulário de registro -->
         <form id="signup-form" class="space-y-4">
             <div>
                 <label for="signup-email" class="sr-only">E-mail</label>
@@ -120,15 +77,11 @@
                 <input type="password" id="signup-password" name="signup-password" placeholder="Palavra-passe"
                        class="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required>
             </div>
-
-            <!-- Botão principal de registro -->
             <button type="submit"
                     class="w-full bg-green-600 text-white p-3 rounded-md font-semibold hover:bg-green-700 transition-colors">
                 Registar
             </button>
         </form>
-
-        <!-- CTA para alternar de volta ao login -->
         <div class="mt-4 text-center">
             <p class="text-gray-600">
                 Já tem uma conta?
@@ -137,98 +90,52 @@
         </div>
     </div>
 
-
-    <!--
-      ==================================
-      CONTÊINER PRINCIPAL DO APLICATIVO
-      ==================================
-      - Mostrado apenas após autenticação bem-sucedida
-      - `hidden` é removido via JS
-    -->
+    <!-- Aplicativo Principal -->
     <div id="app-container" class="container mx-auto p-4 sm:p-8 hidden">
-        <!--
-          Barra superior (nav) com título, abas e logout
-          - A aba "Utilizadores" está oculta por padrão; pode ser liberada por regra de perfil/role
-        -->
         <nav class="bg-blue-600 text-white p-4 rounded-t-lg shadow-md flex flex-wrap justify-center sm:justify-between items-center space-y-2 sm:space-y-0">
             <h1 class="text-xl font-bold text-center sm:text-left">Gestão de Veículos e Ponto</h1>
-
-            <!-- Grupo de botões de navegação -->
             <div class="flex flex-wrap justify-center space-x-2 sm:space-x-4">
-                <!-- Atribua/remova a classe .active via JS para destacar a aba selecionada -->
                 <button id="veiculos-tab" class="tab-button py-2 px-4 rounded-md transition-colors hover:bg-blue-700 active">Veículos</button>
                 <button id="ponto-tab" class="tab-button py-2 px-4 rounded-md transition-colors hover:bg-blue-700">Ponto</button>
                 <button id="utilizadores-tab" class="tab-button py-2 px-4 rounded-md transition-colors hover:bg-blue-700 hidden">Utilizadores</button>
-
-                <!-- Botão de saída -->
                 <button id="logout-btn" class="bg-red-500 py-2 px-4 rounded-md hover:bg-red-600 transition-colors">Sair</button>
             </div>
         </nav>
-
-        <!--
-          Área dinâmica de conteúdo
-          - Aqui, via JS, você injeta listas, formulários e tabelas das abas
-        -->
         <main id="app-content" class="bg-gray-200 p-4 sm:p-8 rounded-b-lg shadow-lg">
-            <!-- Indicador de carregamento; mostre ao buscar dados -->
             <div id="loading-spinner" class="text-center text-gray-500 hidden">
                 <p>A carregar...</p>
             </div>
         </main>
     </div>
 
-    <!--
-      =======================
-      MODAL: Detalhes do Uso
-      =======================
-      - Padrão de modal com overlay sem backdrop-blur (pode ser adicionado se desejar)
-      - Fechamento por dois botões com IDs diferentes
-    -->
+    <!-- Modal: Detalhes do Uso -->
     <div id="use-details-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4 z-50 hidden" aria-hidden="true" role="dialog" aria-modal="true">
         <div class="bg-white rounded-lg p-6 max-w-md w-full shadow-xl">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-xl font-semibold">Detalhes do Uso</h3>
-                <!-- Botão de fechar (canto superior) -->
                 <button id="close-modal-btn" class="text-gray-400 hover:text-gray-600 text-2xl leading-none" aria-label="Fechar">&times;</button>
             </div>
-
-            <!-- Conteúdo preenchido dinamicamente via JS -->
             <div id="modal-content" class="space-y-2 text-sm text-gray-700"></div>
-
-            <!-- Rodapé com ação de fechar -->
             <div class="mt-6 flex justify-end">
                 <button id="close-modal-btn-bottom" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition-colors">Fechar</button>
             </div>
         </div>
     </div>
 
-    <!--
-      =======================
-      MODAL: Message Box (Alertas)
-      =======================
-      - Usado para avisos/erros/feedback simples com um único botão
-      - Reutiliza classe .message-box-overlay
-    -->
+    <!-- Modal: Message Box -->
     <div id="message-box" class="message-box-overlay hidden" aria-hidden="true" role="dialog" aria-modal="true">
         <div class="bg-white rounded-lg p-8 max-w-lg mx-4 shadow-xl text-center">
-            <h3 id="message-box-title" class="text-2xl font-bold mb-4 text-red-600"><!-- título dinâmico --></h3>
-            <p id="message-box-text" class="text-gray-700 mb-6"><!-- mensagem dinâmica --></p>
+            <h3 id="message-box-title" class="text-2xl font-bold mb-4 text-red-600"></h3>
+            <p id="message-box-text" class="text-gray-700 mb-6"></p>
             <button id="message-box-close-btn" class="bg-red-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-600 transition-colors">Entendido</button>
         </div>
     </div>
 
-    <!--
-      =======================
-      MODAL: Confirmação Genérica
-      =======================
-      - Útil para ações destrutivas (ex.: excluir, devolver, encerrar)
-    -->
+    <!-- Modal: Confirmação -->
     <div id="confirm-modal" class="message-box-overlay hidden" aria-hidden="true" role="dialog" aria-modal="true">
         <div class="bg-white rounded-lg p-8 max-w-lg mx-4 shadow-xl text-center">
-            <h3 id="confirm-modal-title" class="text-2xl font-bold mb-4 text-red-600"><!-- título dinâmico --></h3>
-            <p id="confirm-modal-text" class="text-gray-700 mb-6"><!-- mensagem dinâmica --></p>
-
-            <!-- Ações: cancelar/confirmar -->
+            <h3 id="confirm-modal-title" class="text-2xl font-bold mb-4 text-red-600"></h3>
+            <p id="confirm-modal-text" class="text-gray-700 mb-6"></p>
             <div class="flex justify-center space-x-4">
                 <button id="confirm-modal-cancel-btn" class="bg-gray-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-600 transition-colors">Cancelar</button>
                 <button id="confirm-modal-confirm-btn" class="bg-red-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-600 transition-colors">Confirmar</button>
@@ -236,22 +143,13 @@
         </div>
     </div>
 
-    <!--
-      =======================
-      MODAL: Devolução de Veículo
-      =======================
-      - Solicita a quilometragem final para registrar o fechamento do uso
-    -->
+    <!-- Modal: Devolução de Veículo -->
     <div id="return-vehicle-modal" class="message-box-overlay hidden" aria-hidden="true" role="dialog" aria-modal="true">
         <div class="bg-white rounded-lg p-8 max-w-lg mx-4 shadow-xl text-center">
             <h3 class="text-2xl font-bold mb-4">Devolver Veículo</h3>
             <p class="text-gray-700 mb-6">Por favor, insira a quilometragem final do veículo.</p>
-
-            <!-- Formulário de devolução -->
             <form id="return-vehicle-form" class="space-y-4">
                 <input type="number" id="final-mileage" placeholder="Quilometragem Final (km)" class="w-full p-3 border rounded-md" min="0" step="1" required>
-
-                <!-- Ações do modal -->
                 <div class="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-4 mt-6">
                     <button type="button" id="cancel-return-btn" class="bg-gray-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-600 transition-colors">Cancelar</button>
                     <button type="submit" class="bg-green-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-600 transition-colors">Confirmar Devolução</button>
@@ -260,36 +158,23 @@
         </div>
     </div>
 
-    <!--
-      =======================
-      MODAL: Adicionar Manutenção
-      =======================
-      - Registra manutenções com data, descrição, custo e status
-    -->
+    <!-- Modal: Adicionar Manutenção -->
     <div id="add-maintenance-modal" class="message-box-overlay hidden" aria-hidden="true" role="dialog" aria-modal="true">
         <div class="bg-white rounded-lg p-8 max-w-lg mx-4 shadow-xl">
             <h3 class="text-2xl font-bold mb-4">Adicionar Nova Manutenção</h3>
-
             <form id="add-maintenance-form" class="space-y-4">
-                <!-- Data da manutenção -->
                 <div>
                     <label for="maintenance-date" class="block text-sm font-medium text-gray-700">Data da Manutenção</label>
                     <input type="date" id="maintenance-date" class="mt-1 w-full p-2 border border-gray-300 rounded-md" required>
                 </div>
-
-                <!-- Descrição da manutenção -->
                 <div>
                     <label for="maintenance-description" class="block text-sm font-medium text-gray-700">Descrição</label>
                     <textarea id="maintenance-description" rows="3" class="mt-1 w-full p-2 border border-gray-300 rounded-md" placeholder="Ex.: Troca de óleo, alinhamento, revisão" required></textarea>
                 </div>
-
-                <!-- Custo em reais -->
                 <div>
                     <label for="maintenance-cost" class="block text-sm font-medium text-gray-700">Custo (R$)</label>
                     <input type="number" id="maintenance-cost" class="mt-1 w-full p-2 border border-gray-300 rounded-md" min="0" step="0.01" inputmode="decimal" required>
                 </div>
-
-                <!-- Status da manutenção -->
                 <div>
                     <label for="maintenance-status" class="block text-sm font-medium text-gray-700">Status</label>
                     <select id="maintenance-status" class="mt-1 w-full p-2 border border-gray-300 rounded-md" required>
@@ -297,8 +182,6 @@
                         <option value="Pendente">Pendente</option>
                     </select>
                 </div>
-
-                <!-- Ações do modal -->
                 <div class="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-4 mt-6">
                     <button type="button" id="cancel-maintenance-btn" class="bg-gray-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-600 transition-colors">Cancelar</button>
                     <button type="submit" class="bg-green-500 text-white font-bold py-2 px-6 rounded-lg hover:bg-green-600 transition-colors">Adicionar Manutenção</button>
@@ -307,17 +190,6 @@
         </div>
     </div>
 
-    <!--
-      =======================
-      DICAS DE INTEGRAÇÃO JS (opcional)
-      =======================
-      - Use data-attributes para delegação de eventos (ex.: data-modal-target)
-      - Para acessibilidade, alterne aria-hidden/aria-modal quando abrir/fechar modais
-      - Sempre valide no backend; validação no cliente é apenas uma camada extra
-      - Sugestão: criar um arquivo app.js e importar abaixo
-
-      <script src="/js/app.js"></script>
-    -->
     <script type="module" src="app.js"></script>
 </body>
 </html>

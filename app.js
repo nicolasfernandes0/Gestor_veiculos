@@ -1,4 +1,4 @@
-        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
         // Definição dos tipos de dados (apenas para referência)
         // interface User { id: string; nome: string; email: string; funcao: string; acesso: 'user' | 'master'; }
@@ -61,6 +61,18 @@
         let currentUser = null;
         let showAddVehicleForm = false;
         let currentUserRole = 'user'; // Por padrão, o utilizador é 'user'
+        // Adicione estas variáveis globais para controlar a paginação de cada aba
+let currentPage = {
+    veiculos: 1,
+    ponto: 1,
+    utilizadores: 1
+};
+
+
+let currentFilters = {
+    date: null,
+    user: null
+};
 
         // Funções para manipulação do estado e da UI
         const showMessage = (title, message) => {
@@ -265,7 +277,7 @@
                 status: 'DISPONÍVEL',
                 tipo: form.elements['vehicle-tipo'].value
             };
-            const { data, error } = await supabase.from('vehicles').insert(newVehicle);
+            const { error } = await supabase.from('vehicles').insert(newVehicle);
             if (error) {
                 console.error("Erro ao adicionar veículo:", error);
                 showMessage("Erro", `Não foi possível adicionar o veículo. Detalhes: ${error.message}`);
@@ -285,7 +297,7 @@
             confirmModalText.textContent = "Tem certeza que deseja excluir este veículo? Esta ação não pode ser desfeita.";
             confirmModal.classList.remove('hidden');
             confirmModalConfirmBtn.onclick = async () => {
-                const { data, error } = await supabase.from('vehicles').delete().eq('id', id);
+                const { error } = await supabase.from('vehicles').delete().eq('id', id);
                 if (error) {
                     console.error("Erro ao excluir veículo:", error);
                     showMessage("Erro", `Não foi possível excluir o veículo. Detalhes: ${error.message}`);
@@ -304,7 +316,7 @@
                 utilizador: currentUser.email,
                 data: new Date().toLocaleString('pt-BR')
             };
-            const { data, error } = await supabase.from('point_records').insert(newRecord);
+            const { error } = await supabase.from('point_records').insert(newRecord);
             if (error) {
                 console.error("Erro ao registar ponto:", error);
                 showMessage("Erro", `Não foi possível registar o ponto. Detalhes: ${error.message}`);
@@ -386,7 +398,7 @@
                 showMessage("Acesso Negado", "Apenas a liderança pode editar veículos.");
                 return;
             }
-            const { data, error } = await supabase.from('vehicles').update({
+            const { error } = await supabase.from('vehicles').update({
                 placa: editedVehicle.placa,
                 modelo: editedVehicle.modelo,
                 marca: editedVehicle.marca,
@@ -537,7 +549,7 @@
             // Placeholder: Em uma aplicação real, você mostraria um formulário para editar
             const novoNome = prompt("Insira o novo nome do utilizador:", user.nome);
             if (novoNome) {
-                const { data, error } = await supabase.from('users').update({ nome: novoNome }).eq('id', user.id);
+                const { error } = await supabase.from('users').update({ nome: novoNome }).eq('id', user.id);
                 if (error) console.error("Erro ao editar utilizador:", error);
             }
         };
@@ -551,7 +563,7 @@
             confirmModalText.textContent = "Tem certeza que deseja excluir este utilizador? Esta ação não pode ser desfeita.";
             confirmModal.classList.remove('hidden');
             confirmModalConfirmBtn.onclick = async () => {
-                const { data, error } = await supabase.from('users').delete().eq('id', id);
+                const { error } = await supabase.from('users').delete().eq('id', id);
                 if (error) {
                     console.error("Erro ao excluir utilizador:", error);
                     showMessage("Erro", `Não foi possível excluir o utilizador. Detalhes: ${error.message}`);
@@ -580,7 +592,7 @@
             const email = signupForm.elements['signup-email'].value;
             const password = signupForm.elements['signup-password'].value;
 
-            const { data, error } = await supabase.auth.signUp({ email, password });
+            const { error } = await supabase.auth.signUp({ email, password });
 
             if (error) {
                 console.error("Erro de registo:", error.message);
@@ -850,9 +862,22 @@ case 'ponto':
     };
 
     // Filtrar: master vê tudo, user vê só os próprios registros
-    const filteredRecords = currentUserRole === 'master' 
-        ? pointRecords 
+    let filteredRecords = currentUserRole === 'master' 
+        ? [...pointRecords] 
         : pointRecords.filter(r => r.utilizador === currentUser.email);
+    
+    // Aplicar filtros adicionais
+    if (currentFilters.date) {
+        filteredRecords = filteredRecords.filter(record => {
+            const recordDate = parseBrazilianDate(record.data);
+            const filterDate = new Date(currentFilters.date);
+            return recordDate.toDateString() === filterDate.toDateString();
+        });
+    }
+    
+    if (currentFilters.user) {
+        filteredRecords = filteredRecords.filter(record => record.utilizador === currentFilters.user);
+    }
     
     // ORDENAR POR DATA EM ORDEM DECRESCENTE
     const sortedRecords = filteredRecords.sort((a, b) => {
@@ -871,6 +896,16 @@ case 'ponto':
         return user ? user.nome : 'Utilizador Desconhecido';
     };
 
+    // Preencher o dropdown de usuários (apenas para masters)
+    let userFilterOptions = '';
+    if (currentUserRole === 'master') {
+        const uniqueEmails = [...new Set(pointRecords.map(r => r.utilizador))];
+        userFilterOptions = uniqueEmails.map(email => {
+            const userName = getUserNameByEmail(email);
+            return `<option value="${email}" ${currentFilters.user === email ? 'selected' : ''}>${userName}</option>`;
+        }).join('');
+    }
+
     appContent.innerHTML = `
         <div class="flex flex-col sm:flex-row justify-between items-center mb-4 space-y-4 sm:space-y-0">
             <h2 class="text-xl font-semibold">Registro de Ponto Global</h2>
@@ -879,6 +914,29 @@ case 'ponto':
                 <button onclick="window.handleRegisterPoint('SAÍDA')" class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition-colors">Registrar Saída</button>
             </div>
         </div>
+
+        <!-- Seção de Filtros -->
+        <div class="bg-white p-4 rounded-lg shadow mb-4">
+            <h3 class="text-lg font-medium mb-3">Filtros</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label for="filter-date" class="block text-sm font-medium text-gray-700">Data</label>
+                    <input type="date" id="filter-date" value="${currentFilters.date || ''}" class="mt-1 w-full p-2 border border-gray-300 rounded-md">
+                </div>
+                <div>
+                    <label for="filter-user" class="block text-sm font-medium text-gray-700">Utilizador</label>
+                    <select id="filter-user" class="mt-1 w-full p-2 border border-gray-300 rounded-md" ${currentUserRole !== 'master' ? 'disabled' : ''}>
+                        <option value="">Todos os utilizadores</option>
+                        ${userFilterOptions}
+                    </select>
+                </div>
+                <div class="flex items-end space-x-2">
+                    <button onclick="window.applyFilters()" class="w-full bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition-colors">Aplicar</button>
+                    <button onclick="window.clearFilters()" class="w-full bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 transition-colors">Limpar</button>
+                </div>
+            </div>
+        </div>
+
         <div class="bg-white p-6 rounded-lg shadow table-container">
             <table class="min-w-full divide-y divide-gray-200">
                 <thead>
@@ -989,6 +1047,44 @@ case 'ponto':
         };
         window.showReturnVehicleModal = showReturnVehicleModal;
         window.handleReturnVehicle = handleReturnVehicle;
+        // Adicione esta função para aplicar os filtros
+// Funções de paginação para cada aba
+window.nextPage = (tab) => {
+    if (currentPage[tab] < window.totalPages[tab]) {
+        currentPage[tab]++;
+        renderApp();
+    }
+};
+
+window.prevPage = (tab) => {
+    if (currentPage[tab] > 1) {
+        currentPage[tab]--;
+        renderApp();
+    }
+};
+
+// Modifique a função applyFilters para resetar a página ao aplicar filtros
+window.applyFilters = () => {
+    const dateFilter = document.getElementById('filter-date').value;
+    const userFilter = document.getElementById('filter-user').value;
+    
+    currentFilters = {
+        date: dateFilter || null,
+        user: userFilter || null
+    };
+    
+    currentPage.ponto = 1;
+    renderApp();
+};
+
+// Modifique a função clearFilters
+window.clearFilters = () => {
+    document.getElementById('filter-date').value = '';
+    document.getElementById('filter-user').value = '';
+    currentFilters = { date: null, user: null };
+    currentPage.ponto = 1;
+    renderApp();
+};
 
         // Event Listeners
         veiculosTabBtn.addEventListener('click', () => setActiveTab('veiculos'));
@@ -1040,45 +1136,3 @@ case 'ponto':
                 showLogin();
             }
         };
-        let currentPage = 1;
-
-window.nextPage = () => {
-    const filteredRecords = currentUserRole === 'master' 
-        ? pointRecords 
-        : pointRecords.filter(r => r.utilizador === currentUser.email);
-    const totalPages = Math.ceil(filteredRecords.length / 10);
-    if (currentPage < totalPages) {
-        currentPage++;
-        renderApp();
-    }
-};
-
-window.prevPage = () => {
-    if (currentPage > 1) {
-        currentPage--;
-        renderApp();
-    }
-};
-async function logoutApp() {
-    try {
-        // Verifica se há um usuário autenticado
-        const user = await Auth.currentAuthenticatedUser();
-        if (user) {
-            await Auth.signOut();
-            console.log("Logout bem-sucedido");
-        }
-
-        // Remove o item do localStorage de qualquer forma para garantir
-        localStorage.removeItem("loggedIn");
-
-        // Redireciona o usuário
-        window.location.href = 'index.html';
-    } catch (error) {
-        console.error("Erro ao sair:", error);
-        // Se o erro for a falta de sessão, ainda assim podemos remover o item do localStorage
-        if (error.message.includes("The user is not authenticated")) {
-            localStorage.removeItem("loggedIn");
-            window.location.href = 'index.html';
-        }
-    }
-}
