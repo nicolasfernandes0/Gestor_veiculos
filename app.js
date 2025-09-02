@@ -824,19 +824,52 @@
                         }
                         break;
 case 'ponto':
+    // Função para converter formato brasileiro para Date
+    const parseBrazilianDate = (dateString) => {
+        const [datePart, timePart] = dateString.split(', ');
+        const [day, month, year] = datePart.split('/');
+        const [hours, minutes, seconds] = timePart.split(':');
+        return new Date(year, month - 1, day, hours, minutes, seconds);
+    };
+
+    // Função para formatar a data para exibição
+    const formatDateTime = (dateString) => {
+        try {
+            const date = parseBrazilianDate(dateString);
+            return date.toLocaleString('pt-BR', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+        } catch (error) {
+            return dateString; // Retorna o original se houver erro
+        }
+    };
+
     // Filtrar: master vê tudo, user vê só os próprios registros
     const filteredRecords = currentUserRole === 'master' 
         ? pointRecords 
         : pointRecords.filter(r => r.utilizador === currentUser.email);
+    
+    // ORDENAR POR DATA EM ORDEM DECRESCENTE
+    const sortedRecords = filteredRecords.sort((a, b) => {
+        const dateA = parseBrazilianDate(a.data);
+        const dateB = parseBrazilianDate(b.data);
+        return dateB - dateA;
+    });
 
     // Paginação: 10 por página
     const pageSize = 10;
-    const totalPages = Math.ceil(filteredRecords.length / pageSize);
-    const paginatedRecords = filteredRecords.slice((currentPage - 1) * pageSize, currentPage * pageSize);
-                            const getUserNameByEmail = (email) => {
-                            const user = users.find(u => u.email === email);
-                            return user ? user.nome : 'Utilizador Desconhecido';
-                        };
+    const totalPages = Math.ceil(sortedRecords.length / pageSize);
+    const paginatedRecords = sortedRecords.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+    const getUserNameByEmail = (email) => {
+        const user = users.find(u => u.email === email);
+        return user ? user.nome : 'Utilizador Desconhecido';
+    };
 
     appContent.innerHTML = `
         <div class="flex flex-col sm:flex-row justify-between items-center mb-4 space-y-4 sm:space-y-0">
@@ -848,14 +881,20 @@ case 'ponto':
         </div>
         <div class="bg-white p-6 rounded-lg shadow table-container">
             <table class="min-w-full divide-y divide-gray-200">
-                <thead> ... </thead>
+                <thead>
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">TIPO</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">UTILIZADOR</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">DATA/HORA</th>
+                    </tr>
+                </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
                     ${paginatedRecords.map(record => `
-                                            <tr key="${record.id}">
-                                                <td class="px-6 py-4 whitespace-nowrap font-medium ${record.tipo === 'ENTRADA' ? 'text-green-600' : 'text-red-600'}">${record.tipo}</td>
-                                                <td class="px-6 py-4 whitespace-nowrap">${getUserNameByEmail(record.utilizador)}</td>
-                                                <td class="px-6 py-4 whitespace-nowrap">${record.data}</td>
-                                            </tr>
+                        <tr key="${record.id}">
+                            <td class="px-6 py-4 whitespace-nowrap font-medium ${record.tipo === 'ENTRADA' ? 'text-green-600' : 'text-red-600'}">${record.tipo}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">${getUserNameByEmail(record.utilizador)}</td>
+                            <td class="px-6 py-4 whitespace-nowrap">${formatDateTime(record.data)}</td>
+                        </tr>
                     `).join('')}
                 </tbody>
             </table>
