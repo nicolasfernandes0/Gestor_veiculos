@@ -1020,3 +1020,26 @@ window.prevPage = () => {
         renderApp();
     }
 };
+async function logoutApp() {
+    try {
+        // Verifica se há um usuário autenticado
+        const user = await Auth.currentAuthenticatedUser();
+        if (user) {
+            await Auth.signOut();
+            console.log("Logout bem-sucedido");
+        }
+
+        // Remove o item do localStorage de qualquer forma para garantir
+        localStorage.removeItem("loggedIn");
+
+        // Redireciona o usuário
+        window.location.href = 'index.html';
+    } catch (error) {
+        console.error("Erro ao sair:", error);
+        // Se o erro for a falta de sessão, ainda assim podemos remover o item do localStorage
+        if (error.message.includes("The user is not authenticated")) {
+            localStorage.removeItem("loggedIn");
+            window.location.href = 'index.html';
+        }
+    }
+}
