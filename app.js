@@ -253,7 +253,7 @@
         const handleAddVehicle = async (event) => {
             event.preventDefault();
             if (currentUserRole !== 'master') {
-                showMessage("Acesso Negado", "Apenas utilizadores master podem adicionar veículos.");
+                showMessage("Acesso Negado", "Apenas a liderança podem adicionar veículos.");
                 return;
             }
             const form = event.target;
@@ -278,7 +278,7 @@
 
         const handleDeleteVehicle = (id) => {
             if (currentUserRole !== 'master') {
-                showMessage("Acesso Negado", "Apenas utilizadores master podem excluir veículos.");
+                showMessage("Acesso Negado", "Apenas a liderança pode excluir veículos.");
                 return;
             }
             confirmModalTitle.textContent = "Confirmar Exclusão";
@@ -315,7 +315,7 @@
 
         const handleAddMaintenance = (vehicleId) => {
             if (currentUserRole !== 'master') {
-                showMessage("Acesso Negado", "Apenas utilizadores master podem adicionar manutenções.");
+                showMessage("Acesso Negado", "Apenas a liderança pode adicionar manutenções.");
                 return;
             }
             selectedVehicleId = vehicleId;
@@ -325,7 +325,7 @@
         const handleAddMaintenanceFormSubmit = async (event) => {
             event.preventDefault();
             if (currentUserRole !== 'master') {
-                showMessage("Acesso Negado", "Apenas utilizadores master podem adicionar manutenções.");
+                showMessage("Acesso Negado", "Apenas a liderança pode adicionar manutenções.");
                 return;
             }
             
@@ -352,7 +352,7 @@
         };
             const handleCompleteMaintenance = async (maintenanceId) => {
             if (currentUserRole !== 'master') {
-                showMessage("Acesso Negado", "Apenas utilizadores master podem concluir manutenções.");
+                showMessage("Acesso Negado", "Apenas a liderança pode concluir manutenções.");
                 return;
             }
 
@@ -383,7 +383,7 @@
 
         const handleSaveVehicle = async (editedVehicle) => {
             if (currentUserRole !== 'master') {
-                showMessage("Acesso Negado", "Apenas utilizadores master podem editar veículos.");
+                showMessage("Acesso Negado", "Apenas a liderança pode editar veículos.");
                 return;
             }
             const { data, error } = await supabase.from('vehicles').update({
@@ -425,7 +425,7 @@
 
         const handleRegisterVehicleUse = async () => {
             if (currentUserRole !== 'master') {
-                showMessage("Acesso Negado", "Apenas utilizadores master podem editar veículos.");
+                showMessage("Acesso Negado", "Apenas a liderança pode editar veículos.");
                 return;
             }
             const newUseForm = document.getElementById('new-use-form');
@@ -471,7 +471,7 @@
 
         const showReturnVehicleModal = () => {
             if (currentUserRole !== 'master') {
-                showMessage("Acesso Negado", "Apenas utilizadores master podem devolver veículos.");
+                showMessage("Acesso Negado", "Apenas a liderança pode devolver veículos.");
                 return;
             }
             returnVehicleModal.classList.remove('hidden');
@@ -480,7 +480,7 @@
         const handleReturnVehicle = async (event) => {
             event.preventDefault();
             if (currentUserRole !== 'master') {
-                showMessage("Acesso Negado", "Apenas utilizadores master podem devolver veículos.");
+                showMessage("Acesso Negado", "Apenas a liderança pode devolver veículos.");
                 return;
             }
             const finalMileage = document.getElementById('final-mileage').value;
@@ -531,7 +531,7 @@
         
         const handleEditUser = async (user) => {
             if (currentUserRole !== 'master') {
-                showMessage("Acesso Negado", "Apenas utilizadores master podem editar outros utilizadores.");
+                showMessage("Acesso Negado", "Apenas a liderança pode editar outros utilizadores.");
                 return;
             }
             // Placeholder: Em uma aplicação real, você mostraria um formulário para editar
@@ -544,7 +544,7 @@
         
         const handleDeleteUser = (id) => {
             if (currentUserRole !== 'master') {
-                showMessage("Acesso Negado", "Apenas utilizadores master podem excluir outros utilizadores.");
+                showMessage("Acesso Negado", "Apenas a liderança pode excluir outros utilizadores.");
                 return;
             }
             confirmModalTitle.textContent = "Confirmar Exclusão";
