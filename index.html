@@ -346,19 +346,19 @@
 
         const setupRealtimeListeners = () => {
             supabase
-                .channel('public:users')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, payload => {
-                    console.log('User change received!', payload);
-                    if (payload.eventType === 'INSERT') {
-                        users.push(payload.new);
-                    } else if (payload.eventType === 'UPDATE') {
-                        users = users.map(u => (u.id === payload.old.id ? payload.new : u));
-                    } else if (payload.eventType === 'DELETE') {
-                        users = users.filter(u => u.id !== payload.old.id);
-                    }
-                    renderApp();
-                })
-                .subscribe();
+        .channel('public:users')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, payload => {
+            console.log('User change received!', payload);
+            if (payload.eventType === 'INSERT') {
+                users.push(payload.new);
+            } else if (payload.eventType === 'UPDATE') {
+                users = users.map(u => (u.id === payload.old.id ? payload.new : u));
+            } else if (payload.eventType === 'DELETE') {
+                users = users.filter(u => u.id !== payload.old.id);
+            }
+            renderApp();
+        })
+        .subscribe();
 
             supabase
                 .channel('public:vehicles')
@@ -521,6 +521,36 @@
                 showMessage("Erro", `Não foi possível adicionar a manutenção. Detalhes: ${e.message}`);
             }
         };
+            const handleCompleteMaintenance = async (maintenanceId) => {
+            if (currentUserRole !== 'master') {
+                showMessage("Acesso Negado", "Apenas utilizadores master podem concluir manutenções.");
+                return;
+            }
+
+            confirmModalTitle.textContent = "Confirmar Conclusão";
+            confirmModalText.textContent = "Tem certeza que deseja marcar esta manutenção como 'Concluída'?";
+            confirmModal.classList.remove('hidden');
+
+            confirmModalConfirmBtn.onclick = async () => {
+                try {
+                    const { error } = await supabase
+                        .from('maintenances')
+                        .update({ status: 'Concluído' })
+                        .eq('id', maintenanceId);
+
+                    if (error) throw error;
+
+                    showMessage("Sucesso", "Manutenção concluída com sucesso!");
+                    confirmModal.classList.add('hidden');
+                    renderApp();
+
+                } catch (e) {
+                    console.error("Erro ao concluir manutenção:", e);
+                    showMessage("Erro", `Não foi possível concluir a manutenção. Detalhes: ${e.message}`);
+                    confirmModal.classList.add('hidden');
+                }
+            };
+        };
 
         const handleSaveVehicle = async (editedVehicle) => {
             if (currentUserRole !== 'master') {
@@ -565,13 +595,19 @@
         };
 
         const handleRegisterVehicleUse = async () => {
+            if (currentUserRole !== 'master') {
+                showMessage("Acesso Negado", "Apenas utilizadores master podem editar veículos.");
+                return;
+            }
             const newUseForm = document.getElementById('new-use-form');
             const utilizador = newUseForm.querySelector('select[name="utilizador"]').value;
-            const dataInicio = newUseForm.querySelector('input[name="dataInicio"]').value;
             const quilometragemInicial = newUseForm.querySelector('input[name="quilometragemInicial"]').value;
             const finalidade = newUseForm.querySelector('textarea[name="finalidade"]').value;
+            
+            // Adicione esta linha para capturar a data e hora atuais
+            const dataInicio = new Date().toLocaleString('pt-BR');
 
-            if (!selectedVehicleId || !utilizador || !dataInicio || !finalidade || !quilometragemInicial) {
+            if (!selectedVehicleId || !utilizador || !quilometragemInicial || !finalidade) {
                 showMessage("Campos Faltando", "Por favor, preencha todos os campos obrigatórios para registrar o uso do veículo.");
                 return;
             }
@@ -596,6 +632,7 @@
                 // Clear the form
                 newUseForm.reset();
                 showMessage("Sucesso", "Uso do veículo registado com sucesso!");
+                renderApp();
 
             } catch (e) {
                 console.error("Erro ao registrar uso do veículo:", e);
@@ -788,9 +825,9 @@
                                     <p><strong>Status:</strong> ${isEditing ? `<input type="text" id="edit-status" value="${selectedVehicle.status}" class="border rounded-md px-2 py-1 w-full"/>` : `<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusColor}">${statusText}</span>`}</p>
                                 </div>
                             </div>
-                            <div class="bg-gray-100 p-4 rounded-lg flex items-center justify-center">
-                                <p class="text-gray-500">Foto Principal: Nenhuma foto cadastrada</p>
-                            </div>
+                            <div class="bg-gray-100 p-4 rounded-lg flex items-center justify-center"> ${selectedVehicle.foto ? `<img src="${selectedVehicle.foto}" alt="Foto do veículo" class="max-h-48 rounded-lg shadow"/>` : `<p class="text-gray-500">Foto Principal: Nenhuma foto cadastrada</p>`}
+                        </div>
+
                         </div>
 
                         <div class="bg-gray-100 p-4 rounded-lg ${selectedVehicle.status === 'EM USO' ? 'hidden' : ''}">
@@ -812,7 +849,7 @@
                             </form>
                         </div>
                         
-                        <div>
+                    <div>
                             <div class="flex flex-col sm:flex-row justify-between items-center mb-2 space-y-2 sm:space-y-0">
                                 <h3 class="text-lg font-medium">Manutenções do Veículo</h3>
                                 ${currentUserRole === 'master' ? `<button onclick="window.handleAddMaintenance('${selectedVehicleId}')" class="w-full sm:w-auto bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition-colors">Nova Manutenção</button>` : ''}
@@ -825,6 +862,7 @@
                                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">DESCRIÇÃO</th>
                                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CUSTO</th>
                                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">STATUS</th>
+                                            ${currentUserRole === 'master' ? `<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">AÇÕES</th>` : ''}
                                         </tr>
                                     </thead>
                                     <tbody class="bg-white divide-y divide-gray-200">
@@ -834,15 +872,27 @@
                                                     <td class="px-6 py-4 whitespace-nowrap">${m.data_manutencao}</td>
                                                     <td class="px-6 py-4 whitespace-nowrap">${m.descricao}</td>
                                                     <td class="px-6 py-4 whitespace-nowrap">R$ ${m.custo.toFixed(2)}</td>
-                                                    <td class="px-6 py-4 whitespace-nowrap">${m.status}</td>
+                                                    <td class="px-6 py-4 whitespace-nowrap">
+                                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${m.status === 'Concluído' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                                                            ${m.status}
+                                                        </span>
+                                                    </td>
+                                                    ${currentUserRole === 'master' ? `
+                                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                                            ${m.status === 'Pendente' ? `
+                                                                <button onclick="window.handleCompleteMaintenance('${m.id}')" class="text-green-600 hover:text-green-900">Concluir</button>
+                                                            ` : ''}
+                                                        </td>
+                                                    ` : ''}
                                                 </tr>
                                             `).join('')
                                             :
-                                            `<tr><td colspan="4" class="px-6 py-4 text-center text-gray-500">Nenhuma manutenção registada.</td></tr>`
+                                            `<tr><td colspan="${currentUserRole === 'master' ? '5' : '4'}" class="px-6 py-4 text-center text-gray-500">Nenhuma manutenção registada.</td></tr>`
                                         }
                                     </tbody>
                                 </table>
                             </div>
+                        </div>
                         </div>
 
                         <div>
@@ -944,37 +994,52 @@
                             }, 0);
                         }
                         break;
-                    case 'ponto':
-                        appContent.innerHTML = `
-                            <div class="flex flex-col sm:flex-row justify-between items-center mb-4 space-y-4 sm:space-y-0">
-                                <h2 class="text-xl font-semibold">Registro de Ponto Global</h2>
-                                <div class="flex space-x-2">
-                                    <button onclick="window.handleRegisterPoint('ENTRADA')" class="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition-colors">Registrar Entrada</button>
-                                    <button onclick="window.handleRegisterPoint('SAÍDA')" class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition-colors">Registrar Saída</button>
-                                </div>
-                            </div>
-                            <div class="bg-white p-6 rounded-lg shadow table-container">
-                                <table class="min-w-full divide-y divide-gray-200">
-                                    <thead>
-                                        <tr>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">TIPO</th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">UTILIZADOR</th>
-                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">DATA & HORA</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody class="bg-white divide-y divide-gray-200">
-                                        ${pointRecords.map(record => `
+case 'ponto':
+    // Filtrar: master vê tudo, user vê só os próprios registros
+    const filteredRecords = currentUserRole === 'master' 
+        ? pointRecords 
+        : pointRecords.filter(r => r.utilizador === currentUser.email);
+
+    // Paginação: 10 por página
+    const pageSize = 10;
+    const totalPages = Math.ceil(filteredRecords.length / pageSize);
+    const paginatedRecords = filteredRecords.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+                            const getUserNameByEmail = (email) => {
+                            const user = users.find(u => u.email === email);
+                            return user ? user.nome : 'Utilizador Desconhecido';
+                        };
+
+    appContent.innerHTML = `
+        <div class="flex flex-col sm:flex-row justify-between items-center mb-4 space-y-4 sm:space-y-0">
+            <h2 class="text-xl font-semibold">Registro de Ponto Global</h2>
+            <div class="flex space-x-2">
+                <button onclick="window.handleRegisterPoint('ENTRADA')" class="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition-colors">Registrar Entrada</button>
+                <button onclick="window.handleRegisterPoint('SAÍDA')" class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition-colors">Registrar Saída</button>
+            </div>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow table-container">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead> ... </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    ${paginatedRecords.map(record => `
                                             <tr key="${record.id}">
                                                 <td class="px-6 py-4 whitespace-nowrap font-medium ${record.tipo === 'ENTRADA' ? 'text-green-600' : 'text-red-600'}">${record.tipo}</td>
-                                                <td class="px-6 py-4 whitespace-nowrap">${record.utilizador}</td>
+                                                <td class="px-6 py-4 whitespace-nowrap">${getUserNameByEmail(record.utilizador)}</td>
                                                 <td class="px-6 py-4 whitespace-nowrap">${record.data}</td>
                                             </tr>
-                                        `).join('')}
-                                    </tbody>
-                                </table>
-                            </div>
-                        `;
-                        break;
+                    `).join('')}
+                </tbody>
+            </table>
+
+            <!-- Controles de paginação -->
+            <div class="flex justify-between items-center mt-4">
+                <button onclick="window.prevPage()" class="px-4 py-2 bg-gray-300 rounded ${currentPage === 1 ? 'opacity-50 cursor-not-allowed' : ''}">Anterior</button>
+                <span>Página ${currentPage} de ${totalPages || 1}</span>
+                <button onclick="window.nextPage()" class="px-4 py-2 bg-gray-300 rounded ${currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : ''}">Próxima</button>
+            </div>
+        </div>
+    `;
+    break;
                     case 'utilizadores':
                         appContent.innerHTML = `
                             <div class="flex flex-col sm:flex-row justify-between items-center mb-4 space-y-4 sm:space-y-0">
@@ -1027,8 +1092,12 @@
         window.handleRegisterPoint = handleRegisterPoint;
         window.handleEditUser = handleEditUser;
         window.handleDeleteUser = handleDeleteUser;
+        window.showReturnVehicleModal = showReturnVehicleModal;
+        window.handleReturnVehicle = handleReturnVehicle;
         window.handleViewUseDetails = handleViewUseDetails;
         window.handleCloseUseDetailsModal = handleCloseUseDetailsModal;
+        window.handleAddMaintenance = handleAddMaintenance;
+        window.handleCompleteMaintenance = handleCompleteMaintenance; // ADICIONE ESTA LINHA
         window.handleRegisterVehicleUse = handleRegisterVehicleUse;
         window.handleAddMaintenance = handleAddMaintenance;
         window.startEdit = () => { isEditing = true; renderApp(); };
@@ -1103,6 +1172,26 @@
                 showLogin();
             }
         };
+        let currentPage = 1;
+
+window.nextPage = () => {
+    const filteredRecords = currentUserRole === 'master' 
+        ? pointRecords 
+        : pointRecords.filter(r => r.utilizador === currentUser.email);
+    const totalPages = Math.ceil(filteredRecords.length / 10);
+    if (currentPage < totalPages) {
+        currentPage++;
+        renderApp();
+    }
+};
+
+window.prevPage = () => {
+    if (currentPage > 1) {
+        currentPage--;
+        renderApp();
+    }
+};
+
     </script>
 </body>
 </html>
