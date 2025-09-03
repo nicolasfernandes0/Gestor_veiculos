@@ -903,8 +903,8 @@ case 'ponto':
     });
 
     // Paginação: 10 por página
-       const pageSize = 10;
-    const totalPages = Math.ceil(sortedRecords.length / pageSize);
+    const pageSize = 10;
+    const totalPages = Math.max(1, Math.ceil(sortedRecords.length / pageSize));
     const paginatedRecords = sortedRecords.slice((currentPage.ponto - 1) * pageSize, currentPage.ponto * pageSize);
 
     const getUserNameByEmail = (email) => {
@@ -922,7 +922,7 @@ case 'ponto':
         }).join('');
     }
 
-    appContent.innerHTML = `
+     appContent.innerHTML = `
         <div class="flex flex-col sm:flex-row justify-between items-center mb-4 space-y-4 sm:space-y-0">
             <h2 class="text-xl font-semibold">Registro de Ponto Global</h2>
             <div class="flex space-x-2">
@@ -931,66 +931,70 @@ case 'ponto':
             </div>
         </div>
 
-        <!-- Seção de Filtros -->
+        <!-- Seção de Filtros SIMPLIFICADA -->
         <div class="bg-white p-4 rounded-lg shadow mb-4">
             <h3 class="text-lg font-medium mb-3">Filtros</h3>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                    <label for="filter-date" class="block text-sm font-medium text-gray-700">Data</label>
-                    <input type="date" id="filter-date" value="${currentFilters.date || ''}" class="mt-1 w-full p-2 border border-gray-300 rounded-md">
+            
+            <div class="flex flex-col md:flex-row gap-4 items-end">
+                <!-- Filtro de Data -->
+                <div class="w-full md:w-auto">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Data</label>
+                    <input type="date" id="filter-date" value="${currentFilters.date || ''}" class="w-full p-2 border border-gray-300 rounded-md">
                 </div>
-                <div>
-                    <label for="filter-user" class="block text-sm font-medium text-gray-700">Utilizador</label>
-                    <select id="filter-user" class="mt-1 w-full p-2 border border-gray-300 rounded-md" ${currentUserRole !== 'master' ? 'disabled' : ''}>
+                
+                <!-- Filtro de Utilizador (apenas para masters) -->
+                ${currentUserRole === 'master' ? `
+                <div class="w-full md:w-auto">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Utilizador</label>
+                    <select id="filter-user" class="w-full p-2 border border-gray-300 rounded-md">
                         <option value="">Todos os utilizadores</option>
                         ${userFilterOptions}
                     </select>
                 </div>
-                <div class="flex items-end space-x-2">
-                    <button onclick="window.applyFilters()" class="w-full bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition-colors">Aplicar</button>
-                    <button onclick="window.clearFilters()" class="w-full bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 transition-colors">Limpar</button>
+                ` : ''}
+                
+                <!-- Botões -->
+                <div class="flex gap-2 w-full md:w-auto">
+                    <button onclick="window.applyFilters()" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition-colors flex-1">Aplicar</button>
+                    <button onclick="window.clearFilters()" class="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 transition-colors flex-1">Limpar</button>
                 </div>
             </div>
         </div>
 
-        <!-- Mensagem de erro da API (se aplicável) -->
-        ${pointRecords.length === 0 ? `
-        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
-            <strong class="font-bold">Erro de conexão!</strong>
-            <span class="block sm:inline"> Não foi possível carregar os registros de ponto. Verifique sua conexão com a internet.</span>
-        </div>
-        ` : ''}
-
-        <div class="bg-white p-6 rounded-lg shadow table-container">
-            <table class="min-w-full divide-y divide-gray-200">
+        <!-- Tabela de registros -->
+        <div class="bg-white p-6 rounded-lg shadow overflow-x-auto">
+            <table class="min-w-full">
                 <thead>
-                    <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">TIPO</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">UTILIZADOR</th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">DATA/HORA</th>
+                    <tr class="border-b">
+                        <th class="text-left font-medium text-gray-700 py-2">TIPO</th>
+                        <th class="text-left font-medium text-gray-700 py-2">UTILIZADOR</th>
+                        <th class="text-left font-medium text-gray-700 py-2">DATA/HORA</th>
                     </tr>
                 </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
+                <tbody>
                     ${paginatedRecords.length > 0 ? paginatedRecords.map(record => `
-                        <tr key="${record.id}">
-                            <td class="px-6 py-4 whitespace-nowrap font-medium ${record.tipo === 'ENTRADA' ? 'text-green-600' : 'text-red-600'}">${record.tipo}</td>
-                            <td class="px-6 py-4 whitespace-nowrap">${getUserNameByEmail(record.utilizador)}</td>
-                            <td class="px-6 py-4 whitespace-nowrap">${formatDateTime(record.data)}</td>
+                        <tr class="border-b">
+                            <td class="py-3 ${record.tipo === 'ENTRADA' ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}">${record.tipo}</td>
+                            <td class="py-3">${getUserNameByEmail(record.utilizador)}</td>
+                            <td class="py-3">${formatDateTime(record.data)}</td>
                         </tr>
                     `).join('') : `
-                    <tr>
-                        <td colspan="3" class="px-6 py-4 text-center">Nenhum registro encontrado</td>
-                    </tr>
+                        <tr>
+                            <td colspan="3" class="py-4 text-center text-gray-500">Nenhum registro encontrado</td>
+                        </tr>
                     `}
                 </tbody>
             </table>
 
-                <!-- Controles de paginação -->
-    <div class="flex justify-between items-center mt-4">
-        <button onclick="window.prevPage('ponto')" class="px-4 py-2 bg-gray-300 rounded ${currentPage.ponto === 1 ? 'opacity-50 cursor-not-allowed' : ''}">Anterior</button>
-        <span>Página ${currentPage.ponto} de ${totalPages || 1}</span>
-        <button onclick="window.nextPage('ponto')" class="px-4 py-2 bg-gray-300 rounded ${currentPage.ponto === totalPages ? 'opacity-50 cursor-not-allowed' : ''}">Próxima</button>
-    </div>
+            <!-- Paginação -->
+            ${totalPages > 1 ? `
+            <div class="flex justify-between items-center mt-4">
+                <button onclick="window.prevPage('ponto')" class="px-4 py-2 bg-gray-200 rounded ${currentPage.ponto === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-300'}">Anterior</button>
+                <span class="text-sm">Página ${currentPage.ponto} de ${totalPages}</span>
+                <button onclick="window.nextPage('ponto')" class="px-4 py-2 bg-gray-200 rounded ${currentPage.ponto === totalPages ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-300'}">Próxima</button>
+            </div>
+            ` : ''}
+        </div>
     `;
     break;
                     case 'utilizadores':
@@ -1098,25 +1102,30 @@ window.prevPage = (tab) => {
 
 // Modifique a função applyFilters para resetar a página ao aplicar filtros
 window.applyFilters = () => {
-    const dateFilter = document.getElementById('filter-date').value;
-    const userFilter = document.getElementById('filter-user').value;
+    const dateFilter = document.getElementById('filter-date')?.value || '';
+    const userFilter = document.getElementById('filter-user')?.value || '';
     
     currentFilters = {
-        date: dateFilter || null,
-        user: userFilter || null
+        date: dateFilter,
+        user: userFilter
     };
     
     currentPage.ponto = 1;
     renderApp();
 };
 
-// Modifique a função clearFilters
 window.clearFilters = () => {
-    document.getElementById('filter-date').value = '';
-    document.getElementById('filter-user').value = '';
     currentFilters = { date: null, user: null };
     currentPage.ponto = 1;
     renderApp();
+    
+    // Resetar os campos do formulário após o re-render
+    setTimeout(() => {
+        const dateInput = document.getElementById('filter-date');
+        const userSelect = document.getElementById('filter-user');
+        if (dateInput) dateInput.value = '';
+        if (userSelect) userSelect.value = '';
+    }, 100);
 };
 
         // Event Listeners
