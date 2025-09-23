@@ -2,25 +2,23 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, master ]
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
       
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-          
-      - name: Create config file
+      - name: Create Supabase config file
         run: |
-          echo "const CONFIG = {
-            apiUrl: '${{ secrets.API_URL }}',
-            environment: 'production'
-          };" > config.js
+          cat > supabase-config.js << 'EOF'
+          export const supabaseConfig = {
+              url: '${{ secrets.SUPABASE_URL }}',
+              anonKey: '${{ secrets.SUPABASE_ANON_KEY }}'
+          };
+          EOF
           
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3

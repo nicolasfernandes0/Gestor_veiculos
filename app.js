@@ -1,5 +1,5 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-import { supabaseConfig } from './config.js';
+import { supabaseConfig } from './supabase-config.js';
 
 // Configuração do Supabase - AGORA SEGURA
 const supabaseUrl = supabaseConfig.url;
