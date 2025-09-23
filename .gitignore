@@ -1,8 +1,8 @@
 # Arquivos de configuração sensíveis
-config.js
 .env
 .env.local
 .env.production
+config.js
 
 # Logs
 *.log
