@@ -1,8 +1,9 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+import { supabaseConfig } from './config.js';
 
-// Configuração do Supabase - CREDENCIAIS ATUALIZADAS
-const supabaseUrl = 'https://kelzcwwdntxuplvqgjdg.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtlbHpjd3dkbnR4dXBsdnFnamRnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUyMDQ5ODcsImV4cCI6MjA3MDc4MDk4N30.KO6zEZXewXk2UUkjPEB3vDKoFXryIrEPmaefv58nCkg';
+// Configuração do Supabase - AGORA SEGURA
+const supabaseUrl = supabaseConfig.url;
+const supabaseAnonKey = supabaseConfig.anonKey;
 
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
