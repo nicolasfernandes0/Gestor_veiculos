@@ -1057,6 +1057,8 @@ const renderApp = () => {
                         <div class="flex space-x-2">
                             <button onclick="window.handleRegisterPoint('ENTRADA')" class="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition-colors">Registrar Entrada</button>
                             <button onclick="window.handleRegisterPoint('SAÍDA')" class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition-colors">Registrar Saída</button>
+                            <button onclick="window.handleRegisterPoint('INTERVALO')" class="bg-yellow-500 text-white px-4 py-2 rounded-md hover:bg-yellow-600 transition-colors">Registrar Intervalo</button>
+                            <button onclick="window.handleRegisterPoint('VOLTA')" class="bg-orange-500 text-white px-4 py-2 rounded-md hover:bg-orange-600 transition-colors">Registrar Volta</button>
                         </div>
                     </div>
 
@@ -1104,7 +1106,16 @@ const renderApp = () => {
                             <tbody>
                                 ${paginatedRecords.length > 0 ? paginatedRecords.map(record => `
                                     <tr class="border-b">
-                                        <td class="py-3 ${record.tipo === 'ENTRADA' ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}">${record.tipo}</td>
+                                        <td class="py-3 ${
+                                        {
+                                            'ENTRADA': 'text-green-600 font-medium',
+                                            'SAÍDA': 'text-red-500 font-medium',
+                                            'INTERVALO': 'text-orange-500 font-medium',
+                                            'VOLTA': 'text-yellow-500 font-medium'
+                                        }[record.tipo] || ''
+                                        }">
+                                        ${record.tipo}
+                                        </td>
                                         <td class="py-3">${getUserNameByEmail(record.utilizador)}</td>
                                         <td class="py-3">${formatDateTime(record.data)}</td>
                                         <td class="py-3">
