@@ -511,10 +511,10 @@ const handleCloseUseDetailsModal = () => {
 };
 
 const handleRegisterVehicleUse = async () => {
-    if (currentUserRole !== 'master') {
-        showMessage("Acesso Negado", "Apenas a liderança pode editar veículos.");
-        return;
-    }
+   // if (currentUserRole !== 'master') {
+       // showMessage("Acesso Negado", "Apenas a liderança pode editar veículos.");
+       // return;
+   // }
     const newUseForm = document.getElementById('new-use-form');
     const utilizador = newUseForm.querySelector('select[name="utilizador"]').value;
     const quilometragemInicial = newUseForm.querySelector('input[name="quilometragemInicial"]').value;
@@ -555,19 +555,19 @@ const handleRegisterVehicleUse = async () => {
 };
 
 const showReturnVehicleModal = () => {
-    if (currentUserRole !== 'master') {
-        showMessage("Acesso Negado", "Apenas a liderança pode devolver veículos.");
-        return;
-    }
+   // if (currentUserRole !== 'master') {
+      //  showMessage("Acesso Negado", "Apenas a liderança pode devolver veículos.");
+      //  return;
+  //  }
     returnVehicleModal.classList.remove('hidden');
 };
 
 const handleReturnVehicle = async (event) => {
     event.preventDefault();
-    if (currentUserRole !== 'master') {
-        showMessage("Acesso Negado", "Apenas a liderança pode devolver veículos.");
-        return;
-    }
+  //  if (currentUserRole !== 'master') {
+     //   showMessage("Acesso Negado", "Apenas a liderança pode devolver veículos.");
+      //  return;
+   // }
     const finalMileage = document.getElementById('final-mileage').value;
     
     if (!finalMileage) {
