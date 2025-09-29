@@ -751,26 +751,24 @@ const renderApp = () => {
         const statusColor = selectedVehicle.status === 'EM USO' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800';
 
         appContent.innerHTML = `
-            <div class="bg-white p-6 rounded-lg shadow space-y-6">
-                <div class="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
-                    <h2 class="text-xl font-semibold">Detalhes do Veículo: ${selectedVehicle.placa}</h2>
-                    <div class="flex flex-wrap justify-center space-x-2">
-                            ${isEditing ? 
-                                `<button onclick="window.handleSaveVehicleFromDOM()" class="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition-colors">Salvar</button>
-                                 <button onclick="window.cancelEdit()" class="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 transition-colors">Cancelar</button>`
-                                :
-                                `<button onclick="window.startEdit()" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition-colors">Editar</button>`
-                            }
-                            ${selectedVehicle.status === 'EM USO' ?
-                                `<button onclick="window.showReturnVehicleModal()" class="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition-colors">Devolver Veículo</button>`
-                                :
-                                ''
-                            }
-                        ` : ''}
-                        <button onclick="window.showAllVehicles()" class="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 transition-colors">Voltar</button>
-                    </div>
-                </div>
-
+    <div class="bg-white p-6 rounded-lg shadow space-y-6">
+        <div class="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
+            <h2 class="text-xl font-semibold">Detalhes do Veículo: ${selectedVehicle.placa}</h2>
+            <div class="flex flex-wrap justify-center space-x-2">
+                ${isEditing ? 
+                    `<button onclick="window.handleSaveVehicleFromDOM()" class="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition-colors">Salvar</button>
+                     <button onclick="window.cancelEdit()" class="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 transition-colors">Cancelar</button>`
+                    :
+                    `<button onclick="window.startEdit()" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition-colors">Editar</button>`
+                }
+                ${selectedVehicle.status === 'EM USO' ?
+                    `<button onclick="window.showReturnVehicleModal()" class="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition-colors">Devolver Veículo</button>`
+                    :
+                    ''
+                }
+                <button onclick="window.showAllVehicles()" class="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 transition-colors">Voltar</button>
+            </div>
+        </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div class="bg-gray-100 p-4 rounded-lg">
                         <h3 class="text-lg font-medium mb-2">Informações</h3>
