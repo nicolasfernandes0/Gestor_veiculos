@@ -755,7 +755,6 @@ const renderApp = () => {
                 <div class="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
                     <h2 class="text-xl font-semibold">Detalhes do Veículo: ${selectedVehicle.placa}</h2>
                     <div class="flex flex-wrap justify-center space-x-2">
-                        ${currentUserRole === 'master' ? `
                             ${isEditing ? 
                                 `<button onclick="window.handleSaveVehicleFromDOM()" class="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition-colors">Salvar</button>
                                  <button onclick="window.cancelEdit()" class="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 transition-colors">Cancelar</button>`
