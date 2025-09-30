@@ -229,22 +229,6 @@ const fetchData = async () => {
 };
 
 const setupRealtimeListeners = () => {
-    // Listener para users
-    supabase
-        .channel('public:users')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, payload => {
-            console.log('User change received!', payload);
-            if (payload.eventType === 'INSERT') {
-                users.push(payload.new);
-            } else if (payload.eventType === 'UPDATE') {
-                users = users.map(u => (u.id === payload.old.id ? payload.new : u));
-            } else if (payload.eventType === 'DELETE') {
-                users = users.filter(u => u.id !== payload.old.id);
-            }
-            renderApp();
-        })
-        .subscribe();
-
     // Listener para vehicles
     supabase
         .channel('public:vehicles')
