@@ -178,6 +178,17 @@ const getCurrentLocation = () => {
     });
 };
 
+// Função para corrigir o fuso horário na data
+const getCorrectedDate = (dateString) => {
+    if (!dateString) return '';
+    
+    // Cria a data e ajusta para o fuso horário local
+    const date = new Date(dateString);
+    const adjustedDate = new Date(date.getTime() + date.getTimezoneOffset() * 60000);
+    
+    return adjustedDate.toISOString().split('T')[0];
+};
+
 const fetchData = async () => {
     showLoading();
     
@@ -229,6 +240,22 @@ const fetchData = async () => {
 };
 
 const setupRealtimeListeners = () => {
+    // Listener para users
+    supabase
+        .channel('public:users')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'users' }, payload => {
+            console.log('User change received!', payload);
+            if (payload.eventType === 'INSERT') {
+                users.push(payload.new);
+            } else if (payload.eventType === 'UPDATE') {
+                users = users.map(u => (u.id === payload.old.id ? payload.new : u));
+            } else if (payload.eventType === 'DELETE') {
+                users = users.filter(u => u.id !== payload.old.id);
+            }
+            renderApp();
+        })
+        .subscribe();
+
     // Listener para vehicles
     supabase
         .channel('public:vehicles')
@@ -495,10 +522,6 @@ const handleCloseUseDetailsModal = () => {
 };
 
 const handleRegisterVehicleUse = async () => {
-   // if (currentUserRole !== 'master') {
-       // showMessage("Acesso Negado", "Apenas a liderança pode editar veículos.");
-       // return;
-   // }
     const newUseForm = document.getElementById('new-use-form');
     const utilizador = newUseForm.querySelector('select[name="utilizador"]').value;
     const quilometragemInicial = newUseForm.querySelector('input[name="quilometragemInicial"]').value;
@@ -522,15 +545,37 @@ const handleRegisterVehicleUse = async () => {
     };
 
     try {
+        console.log("Registrando uso do veículo:", newVehicleUse);
+        
+        // PRIMEIRO: Registrar o uso
         const { error: useError } = await supabase.from('vehicle_uses').insert(newVehicleUse);
         if (useError) throw useError;
 
-        const { error: vehicleUpdateError } = await supabase.from('vehicles').update({ status: 'EM USO' }).eq('id', selectedVehicleId);
+        console.log("Uso registrado, atualizando status do veículo para EM USO");
+
+        // SEGUNDO: Atualizar o status do veículo
+        const { error: vehicleUpdateError } = await supabase
+            .from('vehicles')
+            .update({ status: 'EM USO' })
+            .eq('id', selectedVehicleId);
+        
         if (vehicleUpdateError) throw vehicleUpdateError;
+
+        console.log("Status do veículo atualizado para EM USO");
+
+        // TERCEIRO: Atualizar os dados locais
+        const updatedVehicle = vehicles.find(v => v.id === selectedVehicleId);
+        if (updatedVehicle) {
+            updatedVehicle.status = 'EM USO';
+        }
         
         newUseForm.reset();
         showMessage("Sucesso", "Uso do veículo registado com sucesso!");
-        renderApp();
+        
+        // QUARTO: Forçar atualização da interface
+        setTimeout(() => {
+            renderApp();
+        }, 500);
 
     } catch (e) {
         console.error("Erro ao registrar uso do veículo:", e);
@@ -539,19 +584,29 @@ const handleRegisterVehicleUse = async () => {
 };
 
 const showReturnVehicleModal = () => {
-   // if (currentUserRole !== 'master') {
-      //  showMessage("Acesso Negado", "Apenas a liderança pode devolver veículos.");
-      //  return;
-  //  }
+    const selectedVehicle = vehicles.find(v => v.id === selectedVehicleId);
+    
+    console.log("=== VERIFICAÇÃO BOTÃO DEVOLVER ===");
+    console.log("Veículo:", selectedVehicle);
+    console.log("Status:", selectedVehicle?.status);
+    console.log("Deve mostrar modal:", selectedVehicle?.status === 'EM USO');
+    
+    if (!selectedVehicle) {
+        showMessage("Erro", "Veículo não encontrado.");
+        return;
+    }
+    
+    if (selectedVehicle.status !== 'EM USO') {
+        showMessage("Aviso", "Este veículo não está em uso no momento.");
+        return;
+    }
+    
     returnVehicleModal.classList.remove('hidden');
 };
 
 const handleReturnVehicle = async (event) => {
     event.preventDefault();
-  //  if (currentUserRole !== 'master') {
-     //   showMessage("Acesso Negado", "Apenas a liderança pode devolver veículos.");
-      //  return;
-   // }
+    
     const finalMileage = document.getElementById('final-mileage').value;
     
     if (!finalMileage) {
@@ -572,6 +627,9 @@ const handleReturnVehicle = async (event) => {
         const originalMileage = activeUse.quilometragem.split('/')[0].trim();
         const newMileage = `${originalMileage} / ${finalMileage}`;
         
+        console.log("Devolvendo veículo - atualizando uso:", activeUse.id);
+        
+        // PRIMEIRO: Atualizar o uso do veículo
         const { error: useError } = await supabase
             .from('vehicle_uses')
             .update({
@@ -580,17 +638,35 @@ const handleReturnVehicle = async (event) => {
                 status: 'CONCLUÍDO'
             })
             .eq('id', activeUse.id);
+        
         if (useError) throw useError;
 
+        console.log("Uso atualizado, mudando status do veículo para DISPONÍVEL");
+
+        // SEGUNDO: Atualizar o status do veículo
         const { error: vehicleUpdateError } = await supabase
             .from('vehicles')
             .update({ status: 'DISPONÍVEL' })
             .eq('id', selectedVehicleId);
+        
         if (vehicleUpdateError) throw vehicleUpdateError;
+
+        console.log("Status do veículo atualizado para DISPONÍVEL");
+
+        // TERCEIRO: Atualizar dados locais
+        const updatedVehicle = vehicles.find(v => v.id === selectedVehicleId);
+        if (updatedVehicle) {
+            updatedVehicle.status = 'DISPONÍVEL';
+        }
         
         returnVehicleModal.classList.add('hidden');
         document.getElementById('final-mileage').value = '';
         showMessage("Sucesso", "Veículo devolvido com sucesso!");
+
+        // QUARTO: Forçar atualização da interface
+        setTimeout(() => {
+            renderApp();
+        }, 500);
 
     } catch (e) {
         console.error("Erro ao devolver veículo:", e);
@@ -688,11 +764,13 @@ const prevPage = (tab) => {
 };
 
 const applyFilters = () => {
-    const dateFilter = document.getElementById('filter-date')?.value || '';
+    const dateInput = document.getElementById('filter-date');
+    const dateFilter = dateInput?.value || '';
     const userFilter = document.getElementById('filter-user')?.value || '';
     
+    // Se não há data selecionada, não aplica filtro de data
     currentFilters = {
-        date: dateFilter,
+        date: dateFilter || null,
         user: userFilter
     };
     
@@ -731,143 +809,153 @@ const renderApp = () => {
         const vehicleSpecificUses = vehicleUses.filter(use => use.vehicle_id === selectedVehicleId);
         const vehicleSpecificMaintenances = maintenances.filter(m => m.vehicle_id === selectedVehicleId);
 
-        const statusText = selectedVehicle.status === 'EM USO' ? 'INDISPONÍVEL' : 'DISPONÍVEL';
-        const statusColor = selectedVehicle.status === 'EM USO' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800';
-
         appContent.innerHTML = `
     <div class="bg-white p-6 rounded-lg shadow space-y-6">
         <div class="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
             <h2 class="text-xl font-semibold">Detalhes do Veículo: ${selectedVehicle.placa}</h2>
             <div class="flex flex-wrap justify-center space-x-2">
-                ${isEditing ? 
+                ${currentUserRole === 'master' && isEditing ? 
                     `<button onclick="window.handleSaveVehicleFromDOM()" class="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition-colors">Salvar</button>
                      <button onclick="window.cancelEdit()" class="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 transition-colors">Cancelar</button>`
                     :
+                    currentUserRole === 'master' ? 
                     `<button onclick="window.startEdit()" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition-colors">Editar</button>`
+                    : ''
                 }
+                
+                <!-- BOTÃO DEVOLVER VEÍCULO - QUALQUER USUÁRIO PODE VER -->
                 ${selectedVehicle.status === 'EM USO' ?
                     `<button onclick="window.showReturnVehicleModal()" class="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition-colors">Devolver Veículo</button>`
                     :
                     ''
                 }
+                
                 <button onclick="window.showAllVehicles()" class="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 transition-colors">Voltar</button>
             </div>
         </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="bg-gray-100 p-4 rounded-lg">
-                        <h3 class="text-lg font-medium mb-2">Informações</h3>
-                        <div class="space-y-2">
-                            <p><strong>Placa:</strong> ${isEditing ? `<input type="text" id="edit-placa" value="${selectedVehicle.placa}" class="border rounded-md px-2 py-1 w-full"/>` : selectedVehicle.placa}</p>
-                            <p><strong>Marca:</strong> ${isEditing ? `<input type="text" id="edit-marca" value="${selectedVehicle.marca}" class="border rounded-md px-2 py-1 w-full"/>` : selectedVehicle.marca}</p>
-                            <p><strong>Modelo:</strong> ${isEditing ? `<input type="text" id="edit-modelo" value="${selectedVehicle.modelo}" class="border rounded-md px-2 py-1 w-full"/>` : selectedVehicle.modelo}</p>
-                            <p><strong>Tipo:</strong> ${isEditing ? `<input type="text" id="edit-tipo" value="${selectedVehicle.tipo}" class="border rounded-md px-2 py-1 w-full"/>` : selectedVehicle.tipo}</p>
-                            <p><strong>Status:</strong> ${isEditing ? `<input type="text" id="edit-status" value="${selectedVehicle.status}" class="border rounded-md px-2 py-1 w-full"/>` : `<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusColor}">${statusText}</span>`}</p>
-                        </div>
-                    </div>
-                    <div class="bg-gray-100 p-4 rounded-lg flex items-center justify-center"> ${selectedVehicle.foto ? `<img src="${selectedVehicle.foto}" alt="Foto do veículo" class="max-h-48 rounded-lg shadow"/>` : `<p class="text-gray-500">Foto Principal: Nenhuma foto cadastrada</p>`}
-                </div>
-
-                </div>
-
-                <div class="bg-gray-100 p-4 rounded-lg ${selectedVehicle.status === 'EM USO' ? 'hidden' : ''}">
-                    <h3 class="text-lg font-medium mb-2">Registrar Uso do Veículo</h3>
-                    <p class="text-sm text-gray-600">Usuário que fará o uso</p>
-                    <form id="new-use-form" class="mt-2 space-y-4">
-                        <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
-                            <select name="utilizador" class="w-full p-2 border rounded-md">
-                                <option value="">Selecione um utilizador</option>
-                                ${users.map(user => `<option key="${user.id}" value="${user.nome}">${user.nome}</option>`).join('')}
-                            </select>
-                            <input type="date" name="dataInicio" class="w-full p-2 border rounded-md"/>
-                        </div>
-                        <div class="flex space-x-4">
-                            <input type="number" name="quilometragemInicial" placeholder="Quilometragem Inicial (km)" class="w-full p-2 border rounded-md" />
-                        </div>
-                        <textarea name="finalidade" placeholder="Finalidade" rows="3" class="w-full p-2 border rounded-md"></textarea>
-                        <button type="button" onclick="window.handleRegisterVehicleUse()" class="w-full sm:w-auto bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition-colors">Registrar Uso</button>
-                    </form>
-                </div>
-                
-            <div>
-                    <div class="flex flex-col sm:flex-row justify-between items-center mb-2 space-y-2 sm:space-y-0">
-                        <h3 class="text-lg font-medium">Manutenções do Veículo</h3>
-                        ${currentUserRole === 'master' ? `<button onclick="window.handleAddMaintenance('${selectedVehicleId}')" class="w-full sm:w-auto bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition-colors">Nova Manutenção</button>` : ''}
-                    </div>
-                    <div class="bg-white p-4 rounded-lg shadow-inner overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead>
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">DATA</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">DESCRIÇÃO</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CUSTO</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">STATUS</th>
-                                    ${currentUserRole === 'master' ? `<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">AÇÕES</th>` : ''}
-                                </tr>
-                            </thead>
-                            <tbody class="bg-white divide-y divide-gray-200">
-                                ${vehicleSpecificMaintenances.length > 0 ?
-                                    vehicleSpecificMaintenances.map(m => `
-                                        <tr key="${m.id}">
-                                            <td class="px-6 py-4 whitespace-nowrap">${m.data_manutencao}</td>
-                                            <td class="px-6 py-4 whitespace-nowrap">${m.descricao}</td>
-                                            <td class="px-6 py-4 whitespace-nowrap">R$ ${m.custo.toFixed(2)}</td>
-                                            <td class="px-6 py-4 whitespace-nowrap">
-                                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${m.status === 'Concluído' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
-                                                    ${m.status}
-                                                </span>
-                                            </td>
-                                            ${currentUserRole === 'master' ? `
-                                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                                    ${m.status === 'Pendente' ? `
-                                                        <button onclick="window.handleCompleteMaintenance('${m.id}')" class="text-green-600 hover:text-green-900">Concluir</button>
-                                                    ` : ''}
-                                                </td>
-                                            ` : ''}
-                                        </tr>
-                                    `).join('')
-                                    :
-                                    `<tr><td colspan="${currentUserRole === 'master' ? '5' : '4'}" class="px-6 py-4 text-center text-gray-500">Nenhuma manutenção registada.</td></tr>`
-                                }
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                </div>
-
-                <div>
-                    <h3 class="text-lg font-medium mb-2">Histórico de Usos</h3>
-                    <div class="bg-white p-4 rounded-lg shadow-inner overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead>
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">DATA INÍCIO</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">DATA FIM</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">UTILIZADOR</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">QUILOMETRAGEM (INÍCIO/FIM)</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">FINALIDADE</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">STATUS</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">AÇÕES</th>
-                                </tr>
-                            </thead>
-                            <tbody class="bg-white divide-y divide-gray-200">
-                                ${vehicleSpecificUses.map(h => `
-                                    <tr key="${h.id}">
-                                        <td class="px-6 py-4 whitespace-nowrap">${h.data_inicio}</td>
-                                        <td class="px-6 py-4 whitespace-nowrap">${h.data_fim || 'Ainda em uso'}</td>
-                                        <td class="px-6 py-4 whitespace-nowrap">${h.utilizador}</td>
-                                        <td class="px-6 py-4 whitespace-nowrap">${h.quilometragem}</td>
-                                        <td class="px-6 py-4 whitespace-nowrap">${h.finalidade}</td>
-                                        <td class="px-6 py-4 whitespace-nowrap">${h.status}</td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                            <button onclick="window.handleViewUseDetails(${JSON.stringify(h).replace(/"/g, '&quot;')})" class="text-blue-600 hover:text-blue-900">Detalhes</button>
-                                        </td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-gray-100 p-4 rounded-lg">
+                <h3 class="text-lg font-medium mb-2">Informações</h3>
+                <div class="space-y-2">
+                    <p><strong>Placa:</strong> ${currentUserRole === 'master' && isEditing ? `<input type="text" id="edit-placa" value="${selectedVehicle.placa}" class="border rounded-md px-2 py-1 w-full"/>` : selectedVehicle.placa}</p>
+                    <p><strong>Marca:</strong> ${currentUserRole === 'master' && isEditing ? `<input type="text" id="edit-marca" value="${selectedVehicle.marca}" class="border rounded-md px-2 py-1 w-full"/>` : selectedVehicle.marca}</p>
+                    <p><strong>Modelo:</strong> ${currentUserRole === 'master' && isEditing ? `<input type="text" id="edit-modelo" value="${selectedVehicle.modelo}" class="border rounded-md px-2 py-1 w-full"/>` : selectedVehicle.modelo}</p>
+                    <p><strong>Tipo:</strong> ${currentUserRole === 'master' && isEditing ? `<input type="text" id="edit-tipo" value="${selectedVehicle.tipo}" class="border rounded-md px-2 py-1 w-full"/>` : selectedVehicle.tipo}</p>
+                    <p><strong>Status:</strong> 
+                        ${currentUserRole === 'master' && isEditing ? 
+                            `<input type="text" id="edit-status" value="${selectedVehicle.status}" class="border rounded-md px-2 py-1 w-full"/>` : 
+                            `<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${selectedVehicle.status === 'EM USO' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}">
+                                ${selectedVehicle.status === 'EM USO' ? 'EM USO' : 'DISPONÍVEL'}
+                            </span>`
+                        }
+                    </p>
                 </div>
             </div>
+            <div class="bg-gray-100 p-4 rounded-lg flex items-center justify-center">
+                ${selectedVehicle.foto ? `<img src="${selectedVehicle.foto}" alt="Foto do veículo" class="max-h-48 rounded-lg shadow"/>` : `<p class="text-gray-500">Foto Principal: Nenhuma foto cadastrada</p>`}
+            </div>
+        </div>
+
+        <!-- FORMULÁRIO DE REGISTRAR USO - QUALQUER USUÁRIO PODE USAR -->
+        <div class="bg-gray-100 p-4 rounded-lg ${selectedVehicle.status === 'EM USO' ? 'hidden' : ''}">
+            <h3 class="text-lg font-medium mb-2">Registrar Uso do Veículo</h3>
+            <p class="text-sm text-gray-600">Usuário que fará o uso</p>
+            <form id="new-use-form" class="mt-2 space-y-4">
+                <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
+                    <select name="utilizador" class="w-full p-2 border rounded-md">
+                        <option value="">Selecione um utilizador</option>
+                        ${users.map(user => `<option key="${user.id}" value="${user.nome}">${user.nome}</option>`).join('')}
+                    </select>
+                    <input type="date" name="dataInicio" class="w-full p-2 border rounded-md"/>
+                </div>
+                <div class="flex space-x-4">
+                    <input type="number" name="quilometragemInicial" placeholder="Quilometragem Inicial (km)" class="w-full p-2 border rounded-md" />
+                </div>
+                <textarea name="finalidade" placeholder="Finalidade" rows="3" class="w-full p-2 border rounded-md"></textarea>
+                <button type="button" onclick="window.handleRegisterVehicleUse()" class="w-full sm:w-auto bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition-colors">Registrar Uso</button>
+            </form>
+        </div>
+        
+        <div>
+            <div class="flex flex-col sm:flex-row justify-between items-center mb-2 space-y-2 sm:space-y-0">
+                <h3 class="text-lg font-medium">Manutenções do Veículo</h3>
+                ${currentUserRole === 'master' ? `<button onclick="window.handleAddMaintenance('${selectedVehicleId}')" class="w-full sm:w-auto bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition-colors">Nova Manutenção</button>` : ''}
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow-inner overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead>
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">DATA</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">DESCRIÇÃO</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CUSTO</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">STATUS</th>
+                            ${currentUserRole === 'master' ? `<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">AÇÕES</th>` : ''}
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        ${vehicleSpecificMaintenances.length > 0 ?
+                            vehicleSpecificMaintenances.map(m => `
+                                <tr key="${m.id}">
+                                    <td class="px-6 py-4 whitespace-nowrap">${m.data_manutencao}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">${m.descricao}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">R$ ${m.custo.toFixed(2)}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${m.status === 'Concluído' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                                            ${m.status}
+                                        </span>
+                                    </td>
+                                    ${currentUserRole === 'master' ? `
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                            ${m.status === 'Pendente' ? `
+                                                <button onclick="window.handleCompleteMaintenance('${m.id}')" class="text-green-600 hover:text-green-900">Concluir</button>
+                                            ` : ''}
+                                        </td>
+                                    ` : ''}
+                                </tr>
+                            `).join('')
+                            :
+                            `<tr><td colspan="${currentUserRole === 'master' ? '5' : '4'}" class="px-6 py-4 text-center text-gray-500">Nenhuma manutenção registada.</td></tr>`
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div>
+            <h3 class="text-lg font-medium mb-2">Histórico de Usos</h3>
+            <div class="bg-white p-4 rounded-lg shadow-inner overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead>
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">DATA INÍCIO</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">DATA FIM</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">UTILIZADOR</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">QUILOMETRAGEM (INÍCIO/FIM)</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">FINALIDADE</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">STATUS</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">AÇÕES</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        ${vehicleSpecificUses.map(h => `
+                            <tr key="${h.id}">
+                                <td class="px-6 py-4 whitespace-nowrap">${h.data_inicio}</td>
+                                <td class="px-6 py-4 whitespace-nowrap">${h.data_fim || 'Ainda em uso'}</td>
+                                <td class="px-6 py-4 whitespace-nowrap">${h.utilizador}</td>
+                                <td class="px-6 py-4 whitespace-nowrap">${h.quilometragem}</td>
+                                <td class="px-6 py-4 whitespace-nowrap">${h.finalidade}</td>
+                                <td class="px-6 py-4 whitespace-nowrap">${h.status}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                    <button onclick="window.handleViewUseDetails(${JSON.stringify(h).replace(/"/g, '&quot;')})" class="text-blue-600 hover:text-blue-900">Detalhes</button>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
         `;
     } else {
         switch (activeTab) {
@@ -918,7 +1006,7 @@ const renderApp = () => {
                                         <td class="px-6 py-4 whitespace-nowrap">${vehicle.modelo}</td>
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${vehicle.status === 'DISPONÍVEL' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
-                                                ${vehicle.status === 'EM USO' ? 'INDISPONÍVEL' : 'DISPONÍVEL'}
+                                                ${vehicle.status === 'EM USO' ? 'EM USO' : 'DISPONÍVEL'}
                                             </span>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
@@ -946,132 +1034,168 @@ const renderApp = () => {
                 break;
                 
             case 'ponto':
-                // Função para converter formato brasileiro para Date
-                const parseBrazilianDate = (dateString) => {
-                    try {
-                        const [datePart, timePart] = dateString.split(', ');
-                        const [day, month, year] = datePart.split('/');
-                        const [hours, minutes, seconds] = timePart.split(':');
-                        return new Date(year, month - 1, day, hours, minutes, seconds);
-                    } catch (error) {
-                        console.error('Erro ao analisar data:', error);
-                        return new Date();
-                    }
-                };
+    // Função para converter formato brasileiro para Date - VERSÃO SIMPLIFICADA
+    const parseBrazilianDate = (dateString) => {
+        try {
+            const [datePart, timePart] = dateString.split(', ');
+            const [day, month, year] = datePart.split('/');
+            const [hours, minutes, seconds] = timePart.split(':');
+            
+            // Cria a data no fuso horário local
+            return new Date(year, month - 1, day, hours, minutes, seconds);
+        } catch (error) {
+            console.error('Erro ao analisar data:', error);
+            return new Date();
+        }
+    };
 
-                // Função para formatar a data para exibição
-                const formatDateTime = (dateString) => {
-                    try {
-                        const date = parseBrazilianDate(dateString);
-                        return date.toLocaleString('pt-BR', {
-                            day: '2-digit',
-                            month: '2-digit',
-                            year: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            second: '2-digit'
-                        });
-                    } catch (error) {
-                        console.error('Erro ao formatar data:', error);
-                        return dateString;
-                    }
-                };
+    // Função para formatar a data para exibição
+    const formatDateTime = (dateString) => {
+        try {
+            const date = parseBrazilianDate(dateString);
+            return date.toLocaleString('pt-BR', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+        } catch (error) {
+            console.error('Erro ao formatar data:', error);
+            return dateString;
+        }
+    };
 
-                // Filtrar: master vê tudo, user vê só os próprios registros
-                let filteredRecords = currentUserRole === 'master' 
-                    ? [...pointRecords] 
-                    : pointRecords.filter(r => r.utilizador === currentUser.email);
+    // Filtrar: master vê tudo, user vê só os próprios registros
+    let filteredRecords = currentUserRole === 'master' 
+        ? [...pointRecords] 
+        : pointRecords.filter(r => r.utilizador === currentUser.email);
+    
+    // Aplicar filtros adicionais - VERSÃO SIMPLIFICADA
+    if (currentFilters.date) {
+        filteredRecords = filteredRecords.filter(record => {
+            try {
+                const recordDate = parseBrazilianDate(record.data);
+                const filterDate = new Date(currentFilters.date);
                 
-                // Aplicar filtros adicionais
-                if (currentFilters.date) {
-                    filteredRecords = filteredRecords.filter(record => {
-                        try {
-                            const recordDate = parseBrazilianDate(record.data);
-                            const filterDate = new Date(currentFilters.date);
-                            return recordDate.toDateString() === filterDate.toDateString();
-                        } catch (error) {
-                            console.error('Erro ao filtrar por data:', error);
-                            return false;
-                        }
-                    });
-                }
-                
-                if (currentFilters.user && currentUserRole === 'master') {
-                    filteredRecords = filteredRecords.filter(record => record.utilizador === currentFilters.user);
-                }
-                
-                // ORDENAR POR DATA EM ORDEM DECRESCENTE
-                const sortedRecords = filteredRecords.sort((a, b) => {
-                    try {
-                        const dateA = parseBrazilianDate(a.data);
-                        const dateB = parseBrazilianDate(b.data);
-                        return dateB - dateA;
-                    } catch (error) {
-                        console.error('Erro ao ordenar registros:', error);
-                        return 0;
-                    }
-                });
+                // Compara apenas dia, mês e ano (forma mais simples)
+                return recordDate.getDate() === filterDate.getDate() &&
+                       recordDate.getMonth() === filterDate.getMonth() &&
+                       recordDate.getFullYear() === filterDate.getFullYear();
+            } catch (error) {
+                console.error('Erro ao filtrar por data:', error);
+                return false;
+            }
+        });
+    }
+    
+    if (currentFilters.user && currentUserRole === 'master') {
+        filteredRecords = filteredRecords.filter(record => record.utilizador === currentFilters.user);
+    }
+    
+    // ORDENAR POR DATA EM ORDEM DECRESCENTE
+    const sortedRecords = filteredRecords.sort((a, b) => {
+        try {
+            const dateA = parseBrazilianDate(a.data);
+            const dateB = parseBrazilianDate(b.data);
+            return dateB - dateA;
+        } catch (error) {
+            console.error('Erro ao ordenar registros:', error);
+            return 0;
+        }
+    });
 
-                // Paginação: 10 por página
-                const pageSizePonto = 10;
-                const totalPagesPonto = Math.max(1, Math.ceil(sortedRecords.length / pageSizePonto));
-                const paginatedRecords = sortedRecords.slice((currentPage.ponto - 1) * pageSizePonto, currentPage.ponto * pageSizePonto);
+    // Paginação: 10 por página
+    const pageSizePonto = 10;
+    const totalPagesPonto = Math.max(1, Math.ceil(sortedRecords.length / pageSizePonto));
+    const paginatedRecords = sortedRecords.slice((currentPage.ponto - 1) * pageSizePonto, currentPage.ponto * pageSizePonto);
 
-                const getUserNameByEmail = (email) => {
-                    const user = users.find(u => u.email === email);
-                    return user ? user.nome : 'Utilizador Desconhecido';
-                };
+    const getUserNameByEmail = (email) => {
+        const user = users.find(u => u.email === email);
+        return user ? user.nome : 'Utilizador Desconhecido';
+    };
 
-                // Preencher o dropdown de usuários (apenas para masters)
-                let userFilterOptions = '';
-                if (currentUserRole === 'master') {
-                    const uniqueEmails = [...new Set(pointRecords.map(r => r.utilizador))];
-                    userFilterOptions = uniqueEmails.map(email => {
-                        const userName = getUserNameByEmail(email);
-                        return `<option value="${email}" ${currentFilters.user === email ? 'selected' : ''}>${userName}</option>`;
-                    }).join('');
-                }
+    // Preencher o dropdown de usuários (apenas para masters)
+    let userFilterOptions = '';
+    if (currentUserRole === 'master') {
+        const uniqueEmails = [...new Set(pointRecords.map(r => r.utilizador))];
+        userFilterOptions = uniqueEmails.map(email => {
+            const userName = getUserNameByEmail(email);
+            return `<option value="${email}" ${currentFilters.user === email ? 'selected' : ''}>${userName}</option>`;
+        }).join('');
+    }
 
-                appContent.innerHTML = `
-                    <div class="flex flex-col sm:flex-row justify-between items-center mb-4 space-y-4 sm:space-y-0">
-                        <h2 class="text-xl font-semibold">Registro de Ponto Global</h2>
-                        <div class="flex space-x-2">
-                            <button onclick="window.handleRegisterPoint('ENTRADA')" class="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition-colors">Registrar Entrada</button>
-                            <button onclick="window.handleRegisterPoint('SAÍDA')" class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition-colors">Registrar Saída</button>
-                            <button onclick="window.handleRegisterPoint('INTERVALO')" class="bg-yellow-500 text-white px-4 py-2 rounded-md hover:bg-yellow-600 transition-colors">Registrar Intervalo</button>
-                            <button onclick="window.handleRegisterPoint('VOLTA')" class="bg-orange-500 text-white px-4 py-2 rounded-md hover:bg-orange-600 transition-colors">Registrar Volta</button>
-                        </div>
+    appContent.innerHTML = `
+        <!-- Cabeçalho e Botões de Ponto -->
+        <div class="mb-6">
+            <h2 class="text-xl font-semibold text-center sm:text-left mb-4">Registro de Ponto Global</h2>
+            
+            <!-- Container dos botões - Layout responsivo -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 max-w-4xl mx-auto">
+                <button onclick="window.handleRegisterPoint('ENTRADA')" 
+                        class="bg-green-500 text-white px-3 py-3 sm:px-4 sm:py-3 rounded-md hover:bg-green-600 transition-colors text-sm sm:text-base font-medium whitespace-nowrap">
+                    <div class="flex flex-col items-center">
+                        <span>📥</span>
+                        <span>Entrada</span>
                     </div>
-
-                    <!-- Seção de Filtros SIMPLIFICADA -->
-                    <div class="bg-white p-4 rounded-lg shadow mb-4">
-                        <h3 class="text-lg font-medium mb-3">Filtros</h3>
-                        
-                        <div class="flex flex-col md:flex-row gap-4 items-end">
-                            <!-- Filtro de Data -->
-                            <div class="w-full md:w-auto">
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Data</label>
-                                <input type="date" id="filter-date" value="${currentFilters.date || ''}" class="w-full p-2 border border-gray-300 rounded-md">
-                            </div>
-                            
-                            <!-- Filtro de Utilizador (apenas para masters) -->
-                            ${currentUserRole === 'master' ? `
-                            <div class="w-full md:w-auto">
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Utilizador</label>
-                                <select id="filter-user" class="w-full p-2 border border-gray-300 rounded-md">
-                                    <option value="">Todos os utilizadores</option>
-                                    ${userFilterOptions}
-                                </select>
-                            </div>
-                            ` : ''}
-                            
-                            <!-- Botões -->
-                            <div class="flex gap-2 w-full md:w-auto">
-                                <button onclick="window.applyFilters()" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition-colors flex-1">Aplicar</button>
-                                <button onclick="window.clearFilters()" class="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 transition-colors flex-1">Limpar</button>
-                            </div>
-                        </div>
+                </button>
+                
+                <button onclick="window.handleRegisterPoint('SAÍDA')" 
+                        class="bg-red-500 text-white px-3 py-3 sm:px-4 sm:py-3 rounded-md hover:bg-red-600 transition-colors text-sm sm:text-base font-medium whitespace-nowrap">
+                    <div class="flex flex-col items-center">
+                        <span>📤</span>
+                        <span>Saída</span>
                     </div>
+                </button>
+                
+                <button onclick="window.handleRegisterPoint('INTERVALO')" 
+                        class="bg-yellow-500 text-white px-3 py-3 sm:px-4 sm:py-3 rounded-md hover:bg-yellow-600 transition-colors text-sm sm:text-base font-medium whitespace-nowrap">
+                    <div class="flex flex-col items-center">
+                        <span>⏸️</span>
+                        <span>Intervalo</span>
+                    </div>
+                </button>
+                
+                <button onclick="window.handleRegisterPoint('VOLTA')" 
+                        class="bg-orange-500 text-white px-3 py-3 sm:px-4 sm:py-3 rounded-md hover:bg-orange-600 transition-colors text-sm sm:text-base font-medium whitespace-nowrap">
+                    <div class="flex flex-col items-center">
+                        <span>↩️</span>
+                        <span>Volta</span>
+                    </div>
+                </button>
+            </div>
+        </div>
+
+        <!-- Seção de Filtros -->
+        <div class="bg-white p-4 rounded-lg shadow mb-4">
+            <h3 class="text-lg font-medium mb-3">Filtros</h3>
+            
+            <div class="flex flex-col md:flex-row gap-4 items-end">
+                <!-- Filtro de Data -->
+                <div class="w-full md:w-auto">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Data</label>
+                    <input type="date" id="filter-date" value="${currentFilters.date || new Date().toISOString().split('T')[0]}" class="w-full p-2 border border-gray-300 rounded-md">
+                </div>
+                
+                <!-- Filtro de Utilizador (apenas para masters) -->
+                ${currentUserRole === 'master' ? `
+                <div class="w-full md:w-auto">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Utilizador</label>
+                    <select id="filter-user" class="w-full p-2 border border-gray-300 rounded-md">
+                        <option value="">Todos os utilizadores</option>
+                        ${userFilterOptions}
+                    </select>
+                </div>
+                ` : ''}
+                
+                <!-- Botões -->
+                <div class="flex gap-2 w-full md:w-auto">
+                    <button onclick="window.applyFilters()" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition-colors flex-1">Aplicar</button>
+                    <button onclick="window.clearFilters()" class="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 transition-colors flex-1">Limpar</button>
+                </div>
+            </div>
+        </div>
 
                     <!-- Tabela de registros -->
                     <div class="bg-white p-6 rounded-lg shadow overflow-x-auto">
@@ -1225,6 +1349,7 @@ window.nextPage = nextPage;
 window.prevPage = prevPage;
 window.applyFilters = applyFilters;
 window.clearFilters = clearFilters;
+window.getCorrectedDate = getCorrectedDate;
 
 // Event Listeners
 veiculosTabBtn.addEventListener('click', () => setActiveTab('veiculos'));
