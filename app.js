@@ -82,9 +82,24 @@ let currentFilters = {
 };
 
 // Funções para manipulação do estado e da UI
-const showMessage = (title, message) => {
+const showMessage = (title, message, type = 'info') => {
     messageBoxTitle.textContent = title;
     messageBoxText.textContent = message;
+    
+    // Remove classes anteriores
+    messageBox.classList.remove('bg-blue-50', 'bg-red-50', 'bg-green-50', 'bg-yellow-50');
+    
+    // Adiciona classe baseada no tipo
+    if (type === 'error') {
+        messageBox.classList.add('bg-red-50');
+    } else if (type === 'success') {
+        messageBox.classList.add('bg-green-50');
+    } else if (type === 'warning') {
+        messageBox.classList.add('bg-yellow-50');
+    } else {
+        messageBox.classList.add('bg-blue-50');
+    }
+    
     messageBox.classList.remove('hidden');
 };
 
@@ -202,6 +217,51 @@ const getCorrectedDate = (dateString) => {
     return adjustedDate.toISOString().split('T')[0];
 };
 
+// Função para converter data brasileira para objeto Date
+const parseBrazilianDate = (dateString) => {
+    try {
+        const [datePart, timePart] = dateString.split(', ');
+        const [day, month, year] = datePart.split('/');
+        const [hours, minutes, seconds] = timePart.split(':');
+        
+        // Cria a data no fuso horário local
+        return new Date(year, month - 1, day, hours, minutes, seconds || 0);
+    } catch (error) {
+        console.error('Erro ao analisar data:', error, dateString);
+        return new Date();
+    }
+};
+
+// Função para formatar data para exibição
+const formatDateTime = (dateString) => {
+    try {
+        const date = parseBrazilianDate(dateString);
+        return date.toLocaleString('pt-BR', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+    } catch (error) {
+        console.error('Erro ao formatar data:', error);
+        return dateString;
+    }
+};
+
+// Função para obter início e fim do dia no fuso horário local
+const getDayRange = (dateString) => {
+    const date = new Date(dateString);
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+    
+    return { startOfDay, endOfDay };
+};
+
 const fetchData = async () => {
     showLoading();
     
@@ -246,7 +306,7 @@ const fetchData = async () => {
     } catch (e) {
         console.error("Erro ao buscar dados:", e);
         const errorMessage = `Erro ao carregar dados. Detalhes: ${e.message}`;
-        showMessage("Erro de Conexão", errorMessage);
+        showMessage("Erro de Conexão", errorMessage, 'error');
     } finally {
         hideLoading();
     }
@@ -337,7 +397,7 @@ const setupRealtimeListeners = () => {
 const handleAddVehicle = async (event) => {
     event.preventDefault();
     if (currentUserRole !== 'master') {
-        showMessage("Acesso Negado", "Apenas a liderança podem adicionar veículos.");
+        showMessage("Acesso Negado", "Apenas a liderança podem adicionar veículos.", 'error');
         return;
     }
     const form = event.target;
@@ -352,9 +412,9 @@ const handleAddVehicle = async (event) => {
     const { error } = await supabase.from('vehicles').insert(newVehicle);
     if (error) {
         console.error("Erro ao adicionar veículo:", error);
-        showMessage("Erro", `Não foi possível adicionar o veículo. Detalhes: ${error.message}`);
+        showMessage("Erro", `Não foi possível adicionar o veículo. Detalhes: ${error.message}`, 'error');
     } else {
-        showMessage("Sucesso", "Veículo adicionado com sucesso!");
+        showMessage("Sucesso", "Veículo adicionado com sucesso!", 'success');
         showAddVehicleForm = false;
         renderApp();
     }
@@ -362,7 +422,7 @@ const handleAddVehicle = async (event) => {
 
 const handleDeleteVehicle = (id) => {
     if (currentUserRole !== 'master') {
-        showMessage("Acesso Negado", "Apenas a liderança pode excluir veículos.");
+        showMessage("Acesso Negado", "Apenas a liderança pode excluir veículos.", 'error');
         return;
     }
     confirmModalTitle.textContent = "Confirmar Exclusão";
@@ -372,7 +432,9 @@ const handleDeleteVehicle = (id) => {
         const { error } = await supabase.from('vehicles').delete().eq('id', id);
         if (error) {
             console.error("Erro ao excluir veículo:", error);
-            showMessage("Erro", `Não foi possível excluir o veículo. Detalhes: ${error.message}`);
+            showMessage("Erro", `Não foi possível excluir o veículo. Detalhes: ${error.message}`, 'error');
+        } else {
+            showMessage("Sucesso", "Veículo excluído com sucesso!", 'success');
         }
         confirmModal.classList.add('hidden');
     };
@@ -380,7 +442,7 @@ const handleDeleteVehicle = (id) => {
 
 const handleRegisterPoint = async (type) => {
     if (!currentUser) {
-        showMessage("Erro de Autenticação", "Utilizador não autenticado. Por favor, faça login.");
+        showMessage("Erro de Autenticação", "Utilizador não autenticado. Por favor, faça login.", 'error');
         return;
     }
     
@@ -399,9 +461,9 @@ const handleRegisterPoint = async (type) => {
         const { error } = await supabase.from('point_records').insert(newRecord);
         if (error) {
             console.error("Erro ao registar ponto:", error);
-            showMessage("Erro", `Não foi possível registar o ponto. Detalhes: ${error.message}`);
+            showMessage("Erro", `Não foi possível registar o ponto. Detalhes: ${error.message}`, 'error');
         } else {
-            showMessage("Sucesso", `Ponto de ${type} registado com sucesso!`);
+            showMessage("Sucesso", `Ponto de ${type} registado com sucesso!`, 'success');
         }
     } catch (error) {
         console.error("Erro ao obter localização:", error);
@@ -416,16 +478,16 @@ const handleRegisterPoint = async (type) => {
         const { error: insertError } = await supabase.from('point_records').insert(newRecord);
         if (insertError) {
             console.error("Erro ao registar ponto:", insertError);
-            showMessage("Erro", `Não foi possível registar o ponto. Detalhes: ${insertError.message}`);
+            showMessage("Erro", `Não foi possível registar o ponto. Detalhes: ${insertError.message}`, 'error');
         } else {
-            showMessage("Sucesso", `Ponto de ${type} registado com sucesso! (sem localização)`);
+            showMessage("Sucesso", `Ponto de ${type} registado com sucesso! (sem localização)`, 'success');
         }
     }
 };
 
 const handleAddMaintenance = (vehicleId) => {
     if (currentUserRole !== 'master') {
-        showMessage("Acesso Negado", "Apenas a liderança pode adicionar manutenções.");
+        showMessage("Acesso Negado", "Apenas a liderança pode adicionar manutenções.", 'error');
         return;
     }
     selectedVehicleId = vehicleId;
@@ -435,7 +497,7 @@ const handleAddMaintenance = (vehicleId) => {
 const handleAddMaintenanceFormSubmit = async (event) => {
     event.preventDefault();
     if (currentUserRole !== 'master') {
-        showMessage("Acesso Negado", "Apenas a liderança pode adicionar manutenções.");
+        showMessage("Acesso Negado", "Apenas a liderança pode adicionar manutenções.", 'error');
         return;
     }
     
@@ -453,17 +515,17 @@ const handleAddMaintenanceFormSubmit = async (event) => {
         
         addMaintenanceModal.classList.add('hidden');
         addMaintenanceForm.reset();
-        showMessage("Sucesso", "Manutenção adicionada com sucesso!");
+        showMessage("Sucesso", "Manutenção adicionada com sucesso!", 'success');
         
     } catch (e) {
         console.error("Erro ao adicionar manutenção:", e);
-        showMessage("Erro", `Não foi possível adicionar a manutenção. Detalhes: ${e.message}`);
+        showMessage("Erro", `Não foi possível adicionar a manutenção. Detalhes: ${e.message}`, 'error');
     }
 };
 
 const handleCompleteMaintenance = async (maintenanceId) => {
     if (currentUserRole !== 'master') {
-        showMessage("Acesso Negado", "Apenas a liderança pode concluir manutenções.");
+        showMessage("Acesso Negado", "Apenas a liderança pode concluir manutenções.", 'error');
         return;
     }
 
@@ -480,13 +542,13 @@ const handleCompleteMaintenance = async (maintenanceId) => {
 
             if (error) throw error;
 
-            showMessage("Sucesso", "Manutenção concluída com sucesso!");
+            showMessage("Sucesso", "Manutenção concluída com sucesso!", 'success');
             confirmModal.classList.add('hidden');
             renderApp();
 
         } catch (e) {
             console.error("Erro ao concluir manutenção:", e);
-            showMessage("Erro", `Não foi possível concluir a manutenção. Detalhes: ${e.message}`);
+            showMessage("Erro", `Não foi possível concluir a manutenção. Detalhes: ${e.message}`, 'error');
             confirmModal.classList.add('hidden');
         }
     };
@@ -494,7 +556,7 @@ const handleCompleteMaintenance = async (maintenanceId) => {
 
 const handleSaveVehicle = async (editedVehicle) => {
     if (currentUserRole !== 'master') {
-        showMessage("Acesso Negado", "Apenas a liderança pode editar veículos.");
+        showMessage("Acesso Negado", "Apenas a liderança pode editar veículos.", 'error');
         return;
     }
     const { error } = await supabase.from('vehicles').update({
@@ -506,8 +568,9 @@ const handleSaveVehicle = async (editedVehicle) => {
     }).eq('id', editedVehicle.id);
     if (error) {
         console.error("Erro ao salvar veículo:", error);
-        showMessage("Erro", `Não foi possível salvar o veículo. Detalhes: ${error.message}`);
+        showMessage("Erro", `Não foi possível salvar o veículo. Detalhes: ${error.message}`, 'error');
     } else {
+        showMessage("Sucesso", "Veículo atualizado com sucesso!", 'success');
         isEditing = false;
         renderApp();
     }
@@ -543,7 +606,7 @@ const handleRegisterVehicleUse = async () => {
     const dataInicio = new Date().toLocaleString('pt-BR');
 
     if (!selectedVehicleId || !utilizador || !quilometragemInicial || !finalidade) {
-        showMessage("Campos Faltando", "Por favor, preencha todos os campos obrigatórios para registrar o uso do veículo.");
+        showMessage("Campos Faltando", "Por favor, preencha todos os campos obrigatórios para registrar o uso do veículo.", 'warning');
         return;
     }
 
@@ -583,7 +646,7 @@ const handleRegisterVehicleUse = async () => {
         }
         
         newUseForm.reset();
-        showMessage("Sucesso", "Uso do veículo registado com sucesso!");
+        showMessage("Sucesso", "Uso do veículo registado com sucesso!", 'success');
         
         // QUARTO: Forçar atualização da interface
         setTimeout(() => {
@@ -592,7 +655,7 @@ const handleRegisterVehicleUse = async () => {
 
     } catch (e) {
         console.error("Erro ao registrar uso do veículo:", e);
-        showMessage("Erro", `Não foi possível registrar o uso do veículo. Detalhes: ${e.message}`);
+        showMessage("Erro", `Não foi possível registrar o uso do veículo. Detalhes: ${e.message}`, 'error');
     }
 };
 
@@ -605,12 +668,12 @@ const showReturnVehicleModal = () => {
     console.log("Deve mostrar modal:", selectedVehicle?.status === 'EM USO');
     
     if (!selectedVehicle) {
-        showMessage("Erro", "Veículo não encontrado.");
+        showMessage("Erro", "Veículo não encontrado.", 'error');
         return;
     }
     
     if (selectedVehicle.status !== 'EM USO') {
-        showMessage("Aviso", "Este veículo não está em uso no momento.");
+        showMessage("Aviso", "Este veículo não está em uso no momento.", 'warning');
         return;
     }
     
@@ -623,7 +686,7 @@ const handleReturnVehicle = async (event) => {
     const finalMileage = document.getElementById('final-mileage').value;
     
     if (!finalMileage) {
-        showMessage("Campos Faltando", "Por favor, insira a quilometragem final para confirmar a devolução.");
+        showMessage("Campos Faltando", "Por favor, insira a quilometragem final para confirmar a devolução.", 'warning');
         return;
     }
 
@@ -632,7 +695,7 @@ const handleReturnVehicle = async (event) => {
         .sort((a, b) => new Date(b.data_inicio) - new Date(a.data_inicio))[0];
 
     if (!activeUse) {
-        showMessage("Erro", "Não há uso ativo para este veículo para ser devolvido.");
+        showMessage("Erro", "Não há uso ativo para este veículo para ser devolvido.", 'error');
         return;
     }
 
@@ -674,7 +737,7 @@ const handleReturnVehicle = async (event) => {
         
         returnVehicleModal.classList.add('hidden');
         document.getElementById('final-mileage').value = '';
-        showMessage("Sucesso", "Veículo devolvido com sucesso!");
+        showMessage("Sucesso", "Veículo devolvido com sucesso!", 'success');
 
         // QUARTO: Forçar atualização da interface
         setTimeout(() => {
@@ -683,25 +746,30 @@ const handleReturnVehicle = async (event) => {
 
     } catch (e) {
         console.error("Erro ao devolver veículo:", e);
-        showMessage("Erro", `Não foi possível devolver o veículo. Detalhes: ${e.message}`);
+        showMessage("Erro", `Não foi possível devolver o veículo. Detalhes: ${e.message}`, 'error');
     }
 };
 
 const handleEditUser = async (user) => {
     if (currentUserRole !== 'master') {
-        showMessage("Acesso Negado", "Apenas a liderança pode editar outros utilizadores.");
+        showMessage("Acesso Negado", "Apenas a liderança pode editar outros utilizadores.", 'error');
         return;
     }
     const novoNome = prompt("Insira o novo nome do utilizador:", user.nome);
     if (novoNome) {
         const { error } = await supabase.from('users').update({ nome: novoNome }).eq('id', user.id);
-        if (error) console.error("Erro ao editar utilizador:", error);
+        if (error) {
+            console.error("Erro ao editar utilizador:", error);
+            showMessage("Erro", `Não foi possível editar o utilizador. Detalhes: ${error.message}`, 'error');
+        } else {
+            showMessage("Sucesso", "Utilizador atualizado com sucesso!", 'success');
+        }
     }
 };
 
 const handleDeleteUser = (id) => {
     if (currentUserRole !== 'master') {
-        showMessage("Acesso Negado", "Apenas a liderança pode excluir outros utilizadores.");
+        showMessage("Acesso Negado", "Apenas a liderança pode excluir outros utilizadores.", 'error');
         return;
     }
     confirmModalTitle.textContent = "Confirmar Exclusão";
@@ -711,7 +779,9 @@ const handleDeleteUser = (id) => {
         const { error } = await supabase.from('users').delete().eq('id', id);
         if (error) {
             console.error("Erro ao excluir utilizador:", error);
-            showMessage("Erro", `Não foi possível excluir o utilizador. Detalhes: ${error.message}`);
+            showMessage("Erro", `Não foi possível excluir o utilizador. Detalhes: ${error.message}`, 'error');
+        } else {
+            showMessage("Sucesso", "Utilizador excluído com sucesso!", 'success');
         }
         confirmModal.classList.add('hidden');
     };
@@ -727,7 +797,7 @@ const handleLogin = async (event) => {
 
     if (error) {
         console.error("Erro de login:", error.message);
-        showMessage("Erro de Login", error.message);
+        showMessage("Erro de Login", error.message, 'error');
     }
 };
 
@@ -740,9 +810,9 @@ const handleSignup = async (event) => {
 
     if (error) {
         console.error("Erro de registo:", error.message);
-        showMessage("Erro de Registo", error.message);
+        showMessage("Erro de Registo", error.message, 'error');
     } else {
-        showMessage("Registo Concluído", "Confirme o seu e-mail para ativar a sua conta. Depois, pode iniciar sessão.");
+        showMessage("Registo Concluído", "Confirme o seu e-mail para ativar a sua conta. Depois, pode iniciar sessão.", 'success');
         showLogin();
     }
 };
@@ -751,7 +821,7 @@ const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) {
         console.error("Erro ao sair:", error.message);
-        showMessage("Erro", "Não foi possível terminar a sessão. Por favor, tente novamente.");
+        showMessage("Erro", "Não foi possível terminar a sessão. Por favor, tente novamente.", 'error');
     }
 };
 
@@ -781,7 +851,6 @@ const applyFilters = () => {
     const dateFilter = dateInput?.value || '';
     const userFilter = document.getElementById('filter-user')?.value || '';
     
-    // Se não há data selecionada, não aplica filtro de data
     currentFilters = {
         date: dateFilter || null,
         user: userFilter
@@ -794,14 +863,15 @@ const applyFilters = () => {
 const clearFilters = () => {
     currentFilters = { date: null, user: null };
     currentPage.ponto = 1;
-    renderApp();
     
-    setTimeout(() => {
-        const dateInput = document.getElementById('filter-date');
-        const userSelect = document.getElementById('filter-user');
-        if (dateInput) dateInput.value = '';
-        if (userSelect) userSelect.value = '';
-    }, 100);
+    // Limpar os campos do formulário
+    const dateInput = document.getElementById('filter-date');
+    const userSelect = document.getElementById('filter-user');
+    
+    if (dateInput) dateInput.value = '';
+    if (userSelect) userSelect.value = '';
+    
+    renderApp();
 };
 
 // Renderização principal da aplicação
@@ -1047,168 +1117,133 @@ const renderApp = () => {
                 break;
                 
             case 'ponto':
-    // Função para converter formato brasileiro para Date - VERSÃO SIMPLIFICADA
-    const parseBrazilianDate = (dateString) => {
-        try {
-            const [datePart, timePart] = dateString.split(', ');
-            const [day, month, year] = datePart.split('/');
-            const [hours, minutes, seconds] = timePart.split(':');
-            
-            // Cria a data no fuso horário local
-            return new Date(year, month - 1, day, hours, minutes, seconds);
-        } catch (error) {
-            console.error('Erro ao analisar data:', error);
-            return new Date();
-        }
-    };
-
-    // Função para formatar a data para exibição
-    const formatDateTime = (dateString) => {
-        try {
-            const date = parseBrazilianDate(dateString);
-            return date.toLocaleString('pt-BR', {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit'
-            });
-        } catch (error) {
-            console.error('Erro ao formatar data:', error);
-            return dateString;
-        }
-    };
-
-    // Filtrar: master vê tudo, user vê só os próprios registros
-    let filteredRecords = currentUserRole === 'master' 
-        ? [...pointRecords] 
-        : pointRecords.filter(r => r.utilizador === currentUser.email);
-    
-    // Aplicar filtros adicionais - VERSÃO SIMPLIFICADA
-    if (currentFilters.date) {
-        filteredRecords = filteredRecords.filter(record => {
-            try {
-                const recordDate = parseBrazilianDate(record.data);
-                const filterDate = new Date(currentFilters.date);
+                // Filtrar: master vê tudo, user vê só os próprios registros
+                let filteredRecords = currentUserRole === 'master' 
+                    ? [...pointRecords] 
+                    : pointRecords.filter(r => r.utilizador === currentUser.email);
                 
-                // Compara apenas dia, mês e ano (forma mais simples)
-                return recordDate.getDate() === filterDate.getDate() &&
-                       recordDate.getMonth() === filterDate.getMonth() &&
-                       recordDate.getFullYear() === filterDate.getFullYear();
-            } catch (error) {
-                console.error('Erro ao filtrar por data:', error);
-                return false;
-            }
-        });
-    }
-    
-    if (currentFilters.user && currentUserRole === 'master') {
-        filteredRecords = filteredRecords.filter(record => record.utilizador === currentFilters.user);
-    }
-    
-    // ORDENAR POR DATA EM ORDEM DECRESCENTE
-    const sortedRecords = filteredRecords.sort((a, b) => {
-        try {
-            const dateA = parseBrazilianDate(a.data);
-            const dateB = parseBrazilianDate(b.data);
-            return dateB - dateA;
-        } catch (error) {
-            console.error('Erro ao ordenar registros:', error);
-            return 0;
-        }
-    });
+                // Aplicar filtros adicionais - VERSÃO CORRIGIDA
+                if (currentFilters.date) {
+                    filteredRecords = filteredRecords.filter(record => {
+                        try {
+                            const recordDate = parseBrazilianDate(record.data);
+                            const { startOfDay, endOfDay } = getDayRange(currentFilters.date);
+                            
+                            // Verifica se a data do registro está dentro do dia selecionado
+                            return recordDate >= startOfDay && recordDate <= endOfDay;
+                        } catch (error) {
+                            console.error('Erro ao filtrar por data:', error);
+                            return false;
+                        }
+                    });
+                }
+                
+                if (currentFilters.user && currentUserRole === 'master') {
+                    filteredRecords = filteredRecords.filter(record => record.utilizador === currentFilters.user);
+                }
+                
+                // ORDENAR POR DATA EM ORDEM DECRESCENTE
+                const sortedRecords = filteredRecords.sort((a, b) => {
+                    try {
+                        const dateA = parseBrazilianDate(a.data);
+                        const dateB = parseBrazilianDate(b.data);
+                        return dateB - dateA;
+                    } catch (error) {
+                        console.error('Erro ao ordenar registros:', error);
+                        return 0;
+                    }
+                });
 
-    // Paginação: 10 por página
-    const pageSizePonto = 10;
-    const totalPagesPonto = Math.max(1, Math.ceil(sortedRecords.length / pageSizePonto));
-    const paginatedRecords = sortedRecords.slice((currentPage.ponto - 1) * pageSizePonto, currentPage.ponto * pageSizePonto);
+                // Paginação: 10 por página
+                const pageSizePonto = 10;
+                const totalPagesPonto = Math.max(1, Math.ceil(sortedRecords.length / pageSizePonto));
+                const paginatedRecords = sortedRecords.slice((currentPage.ponto - 1) * pageSizePonto, currentPage.ponto * pageSizePonto);
 
-    const getUserNameByEmail = (email) => {
-        const user = users.find(u => u.email === email);
-        return user ? user.nome : 'Utilizador Desconhecido';
-    };
+                const getUserNameByEmail = (email) => {
+                    const user = users.find(u => u.email === email);
+                    return user ? user.nome : 'Utilizador Desconhecido';
+                };
 
-    // Preencher o dropdown de usuários (apenas para masters)
-    let userFilterOptions = '';
-    if (currentUserRole === 'master') {
-        const uniqueEmails = [...new Set(pointRecords.map(r => r.utilizador))];
-        userFilterOptions = uniqueEmails.map(email => {
-            const userName = getUserNameByEmail(email);
-            return `<option value="${email}" ${currentFilters.user === email ? 'selected' : ''}>${userName}</option>`;
-        }).join('');
-    }
+                // Preencher o dropdown de usuários (apenas para masters)
+                let userFilterOptions = '';
+                if (currentUserRole === 'master') {
+                    const uniqueEmails = [...new Set(pointRecords.map(r => r.utilizador))];
+                    userFilterOptions = uniqueEmails.map(email => {
+                        const userName = getUserNameByEmail(email);
+                        return `<option value="${email}" ${currentFilters.user === email ? 'selected' : ''}>${userName}</option>`;
+                    }).join('');
+                }
 
-    appContent.innerHTML = `
-        <!-- Cabeçalho e Botões de Ponto -->
-        <div class="mb-6">
-            <h2 class="text-xl font-semibold text-center sm:text-left mb-4">Registro de Ponto Global</h2>
-            
-            <!-- Container dos botões - Layout responsivo -->
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 max-w-4xl mx-auto">
-                <button onclick="window.handleRegisterPoint('ENTRADA')" 
-                        class="bg-green-500 text-white px-3 py-3 sm:px-4 sm:py-3 rounded-md hover:bg-green-600 transition-colors text-sm sm:text-base font-medium whitespace-nowrap">
-                    <div class="flex flex-col items-center">
-                        <span>📥</span>
-                        <span>Entrada</span>
+                appContent.innerHTML = `
+                    <!-- Cabeçalho e Botões de Ponto -->
+                    <div class="mb-6">
+                        <h2 class="text-xl font-semibold text-center sm:text-left mb-4">Registro de Ponto Global</h2>
+                        
+                        <!-- Container dos botões - Layout responsivo -->
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 max-w-4xl mx-auto">
+                            <button onclick="window.handleRegisterPoint('ENTRADA')" 
+                                    class="bg-green-500 text-white px-3 py-3 sm:px-4 sm:py-3 rounded-md hover:bg-green-600 transition-colors text-sm sm:text-base font-medium whitespace-nowrap">
+                                <div class="flex flex-col items-center">
+                                    <span>📥</span>
+                                    <span>Entrada</span>
+                                </div>
+                            </button>
+                            
+                            <button onclick="window.handleRegisterPoint('SAÍDA')" 
+                                    class="bg-red-500 text-white px-3 py-3 sm:px-4 sm:py-3 rounded-md hover:bg-red-600 transition-colors text-sm sm:text-base font-medium whitespace-nowrap">
+                                <div class="flex flex-col items-center">
+                                    <span>📤</span>
+                                    <span>Saída</span>
+                                </div>
+                            </button>
+                            
+                            <button onclick="window.handleRegisterPoint('INTERVALO')" 
+                                    class="bg-yellow-500 text-white px-3 py-3 sm:px-4 sm:py-3 rounded-md hover:bg-yellow-600 transition-colors text-sm sm:text-base font-medium whitespace-nowrap">
+                                <div class="flex flex-col items-center">
+                                    <span>⏸️</span>
+                                    <span>Intervalo</span>
+                                </div>
+                            </button>
+                            
+                            <button onclick="window.handleRegisterPoint('VOLTA')" 
+                                    class="bg-orange-500 text-white px-3 py-3 sm:px-4 sm:py-3 rounded-md hover:bg-orange-600 transition-colors text-sm sm:text-base font-medium whitespace-nowrap">
+                                <div class="flex flex-col items-center">
+                                    <span>↩️</span>
+                                    <span>Volta</span>
+                                </div>
+                            </button>
+                        </div>
                     </div>
-                </button>
-                
-                <button onclick="window.handleRegisterPoint('SAÍDA')" 
-                        class="bg-red-500 text-white px-3 py-3 sm:px-4 sm:py-3 rounded-md hover:bg-red-600 transition-colors text-sm sm:text-base font-medium whitespace-nowrap">
-                    <div class="flex flex-col items-center">
-                        <span>📤</span>
-                        <span>Saída</span>
-                    </div>
-                </button>
-                
-                <button onclick="window.handleRegisterPoint('INTERVALO')" 
-                        class="bg-yellow-500 text-white px-3 py-3 sm:px-4 sm:py-3 rounded-md hover:bg-yellow-600 transition-colors text-sm sm:text-base font-medium whitespace-nowrap">
-                    <div class="flex flex-col items-center">
-                        <span>⏸️</span>
-                        <span>Intervalo</span>
-                    </div>
-                </button>
-                
-                <button onclick="window.handleRegisterPoint('VOLTA')" 
-                        class="bg-orange-500 text-white px-3 py-3 sm:px-4 sm:py-3 rounded-md hover:bg-orange-600 transition-colors text-sm sm:text-base font-medium whitespace-nowrap">
-                    <div class="flex flex-col items-center">
-                        <span>↩️</span>
-                        <span>Volta</span>
-                    </div>
-                </button>
-            </div>
-        </div>
 
-        <!-- Seção de Filtros -->
-        <div class="bg-white p-4 rounded-lg shadow mb-4">
-            <h3 class="text-lg font-medium mb-3">Filtros</h3>
-            
-            <div class="flex flex-col md:flex-row gap-4 items-end">
-                <!-- Filtro de Data -->
-                <div class="w-full md:w-auto">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Data</label>
-                    <input type="date" id="filter-date" value="${currentFilters.date || new Date().toISOString().split('T')[0]}" class="w-full p-2 border border-gray-300 rounded-md">
-                </div>
-                
-                <!-- Filtro de Utilizador (apenas para masters) -->
-                ${currentUserRole === 'master' ? `
-                <div class="w-full md:w-auto">
-                    <label class="block text-sm font-medium text-gray-700 mb-1">Utilizador</label>
-                    <select id="filter-user" class="w-full p-2 border border-gray-300 rounded-md">
-                        <option value="">Todos os utilizadores</option>
-                        ${userFilterOptions}
-                    </select>
-                </div>
-                ` : ''}
-                
-                <!-- Botões -->
-                <div class="flex gap-2 w-full md:w-auto">
-                    <button onclick="window.applyFilters()" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition-colors flex-1">Aplicar</button>
-                    <button onclick="window.clearFilters()" class="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 transition-colors flex-1">Limpar</button>
-                </div>
-            </div>
-        </div>
+                    <!-- Seção de Filtros -->
+                    <div class="bg-white p-4 rounded-lg shadow mb-4">
+                        <h3 class="text-lg font-medium mb-3">Filtros</h3>
+                        
+                        <div class="flex flex-col md:flex-row gap-4 items-end">
+                            <!-- Filtro de Data -->
+                            <div class="w-full md:w-auto">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Data</label>
+                                <input type="date" id="filter-date" value="${currentFilters.date || new Date().toISOString().split('T')[0]}" class="w-full p-2 border border-gray-300 rounded-md">
+                            </div>
+                            
+                            <!-- Filtro de Utilizador (apenas para masters) -->
+                            ${currentUserRole === 'master' ? `
+                            <div class="w-full md:w-auto">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Utilizador</label>
+                                <select id="filter-user" class="w-full p-2 border border-gray-300 rounded-md">
+                                    <option value="">Todos os utilizadores</option>
+                                    ${userFilterOptions}
+                                </select>
+                            </div>
+                            ` : ''}
+                            
+                            <!-- Botões -->
+                            <div class="flex gap-2 w-full md:w-auto">
+                                <button onclick="window.applyFilters()" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition-colors flex-1">Aplicar</button>
+                                <button onclick="window.clearFilters()" class="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 transition-colors flex-1">Limpar</button>
+                            </div>
+                        </div>
+                    </div>
 
                     <!-- Tabela de registros -->
                     <div class="bg-white p-6 rounded-lg shadow overflow-x-auto">
@@ -1363,6 +1398,9 @@ window.prevPage = prevPage;
 window.applyFilters = applyFilters;
 window.clearFilters = clearFilters;
 window.getCorrectedDate = getCorrectedDate;
+window.parseBrazilianDate = parseBrazilianDate;
+window.formatDateTime = formatDateTime;
+window.getDayRange = getDayRange;
 
 // Event Listeners
 veiculosTabBtn.addEventListener('click', () => setActiveTab('veiculos'));
@@ -1371,7 +1409,7 @@ utilizadoresTabBtn.addEventListener('click', () => {
     if (currentUserRole === 'master') {
         setActiveTab('utilizadores');
     } else {
-        showMessage('Acesso Negado', 'Você não tem permissão para aceder a esta página.');
+        showMessage('Acesso Negado', 'Você não tem permissão para aceder a esta página.', 'error');
     }
 });
 closeModalBtn.addEventListener('click', handleCloseUseDetailsModal);
