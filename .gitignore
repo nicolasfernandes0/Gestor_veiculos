@@ -1,8 +1,0 @@
-# Arquivos de configuração sensíveis
-supabase-config.js
-config.js
-.env
-*.env
-
-# Dependências
-node_modules/
